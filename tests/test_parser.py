@@ -88,6 +88,64 @@ class TestGenerator:
         code = gen.generate(ast)
         assert "lisp_is_true" in code
 
+class TestExamples:
+    def test_hello_example(self):
+        from generator import CodeGenerator
+        with open('examples/hello.lisp') as f:
+            source = f.read()
+        ast = parse(source)
+        gen = CodeGenerator()
+        code = gen.generate(ast)
+        assert 'lisp_print' in code
+        assert 'lisp_make_string' in code
+    
+    def test_arithmetic_example(self):
+        from generator import CodeGenerator
+        with open('examples/arithmetic.lisp') as f:
+            source = f.read()
+        ast = parse(source)
+        gen = CodeGenerator()
+        code = gen.generate(ast)
+        assert 'lisp_add' in code
+        assert 'lisp_mul' in code
+    
+    def test_comparisons_example(self):
+        from generator import CodeGenerator
+        with open('examples/comparisons.lisp') as f:
+            source = f.read()
+        ast = parse(source)
+        gen = CodeGenerator()
+        code = gen.generate(ast)
+        assert 'lisp_eq' in code
+        assert 'lisp_lt' in code
+        assert 'lisp_gt' in code
+    
+    def test_conditionals_example(self):
+        from generator import CodeGenerator
+        with open('examples/conditionals.lisp') as f:
+            source = f.read()
+        ast = parse(source)
+        gen = CodeGenerator()
+        code = gen.generate(ast)
+        assert 'lisp_is_true' in code
+        assert 'if' in code
+    
+    def test_lists_example(self):
+        from generator import CodeGenerator
+        with open('examples/lists.lisp') as f:
+            source = f.read()
+        ast = parse(source)
+        assert len(ast) > 0
+    
+    def test_quotes_example(self):
+        from generator import CodeGenerator
+        with open('examples/quotes.lisp') as f:
+            source = f.read()
+        ast = parse(source)
+        gen = CodeGenerator()
+        code = gen.generate(ast)
+        assert 'lisp_cons' in code or 'lisp_make_symbol' in code
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])

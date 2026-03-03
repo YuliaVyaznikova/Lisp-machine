@@ -27,15 +27,38 @@ Lisp-to-C compiler
 
 ```
 src/
-  parser/      - Lisp parser (tokenizer, AST)
-  generator/   - C code generator
+  main.py           - entry point
+  parser/
+    tokenizer.py    - lexer
+    ast_nodes.py    - AST node definitions
+    parser.py       - S-expression parser
+  generator/
+    generator.py    - C code generator
 runtime/
-  lisp.h       - Runtime header
-  lisp.c       - Runtime implementation
+  lisp.h            - Runtime header (types, functions)
+  lisp.c            - Runtime implementation
+examples/
+  hello.lisp        - print string
+  arithmetic.lisp   - +, *, numbers
+  comparisons.lisp  - =, <, >
+  conditionals.lisp - if expressions
+  lists.lisp        - cons, first, rest
+  quotes.lisp       - quote (')
 tests/
-  test_runtime.c
-  test_parser.py
+  test_runtime.c    - C runtime tests
+  test_parser.py    - Python parser/generator tests
 ```
+
+### Examples
+
+| File | Description |
+|------|-------------|
+| `hello.lisp` | Print "Hello, World!" |
+| `arithmetic.lisp` | Arithmetic operations (+, *) |
+| `comparisons.lisp` | Comparison operators (=, <, >) |
+| `conditionals.lisp` | If expressions |
+| `lists.lisp` | List operations (cons, first, rest) |
+| `quotes.lisp` | Quoting with ' |
 
 ### Build
 
