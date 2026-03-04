@@ -34,7 +34,7 @@ typedef struct LispValue {
 } LispValue;
 
 #define LISP_TRUE ((LispValue*)1)
-#define LISP_FALSE ((LispValue*)0)
+#define LISP_FALSE ((LispValue*)2)
 
 LispValue* lisp_make_int(int64_t value);
 LispValue* lisp_make_float(double value);

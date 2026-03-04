@@ -15,16 +15,84 @@ COPY . /app/
 RUN mkdir -p build && \
     gcc -Wall -Wextra -std=c11 -c runtime/lisp.c -o build/lisp.o
 
-CMD echo "=== C Runtime Tests ===" && \
-    gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
+CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     ./build/test_runtime 2>&1 | tee -a tests/test_results.txt && \
     echo "" && \
-    echo "=== Python Parser Tests ===" && \
+    echo "=== Python parser tests ===" && \
     python3 -m pytest tests/test_parser.py -v 2>&1 | tee -a tests/test_results.txt && \
     echo "" && \
-    echo "=== Compilation Test ===" && \
-    python3 src/main.py examples/hello.lisp -o build/hello.c && \
-    echo "Generated C code:" && \
-    cat build/hello.c 2>&1 | tee -a tests/test_results.txt && \
+    echo "=== End-to-End tests ===" && \
     echo "" && \
-    echo "=== All tests passed! ===" | tee -a tests/test_results.txt
+    echo "--- hello.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/hello.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/hello.lisp -o build/hello.c && \
+    cat build/hello.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/hello.c build/lisp.o -I. -o build/hello && \
+    ./build/hello 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
+    echo "--- arithmetic.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/arithmetic.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/arithmetic.lisp -o build/arithmetic.c && \
+    cat build/arithmetic.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/arithmetic.c build/lisp.o -I. -o build/arithmetic && \
+    ./build/arithmetic 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
+    echo "--- comparisons.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/comparisons.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/comparisons.lisp -o build/comparisons.c && \
+    cat build/comparisons.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/comparisons.c build/lisp.o -I. -o build/comparisons && \
+    ./build/comparisons 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
+    echo "--- conditionals.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/conditionals.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/conditionals.lisp -o build/conditionals.c && \
+    cat build/conditionals.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/conditionals.c build/lisp.o -I. -o build/conditionals && \
+    ./build/conditionals 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
+    echo "--- lists.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/lists.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/lists.lisp -o build/lists.c && \
+    cat build/lists.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/lists.c build/lisp.o -I. -o build/lists && \
+    ./build/lists 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
+    echo "--- quotes.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/quotes.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/quotes.lisp -o build/quotes.c && \
+    cat build/quotes.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/quotes.c build/lisp.o -I. -o build/quotes && \
+    ./build/quotes 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
+    echo "=== All tests passed ===" | tee -a tests/test_results.txt

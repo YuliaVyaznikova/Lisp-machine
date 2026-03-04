@@ -161,6 +161,14 @@ void lisp_release(LispValue* val) {
 }
 
 static void print_value(LispValue* val) {
+    if (val == LISP_TRUE) {
+        printf("true");
+        return;
+    }
+    if (val == LISP_FALSE) {
+        printf("false");
+        return;
+    }
     if (!val) {
         printf("nil");
         return;

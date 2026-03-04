@@ -5,8 +5,10 @@ class CodeGenerator:
     def __init__(self):
         self.indent = 0
         self.temp_counter = 0
+        self.statements = []
     
     def generate(self, nodes: List[ASTNode]) -> str:
+        self.statements = []
         parts = []
         parts.append(self._header())
         parts.append(self._forward_decls(nodes))
@@ -32,6 +34,15 @@ class CodeGenerator:
         
         lines.append("    return 0;")
         lines.append("}")
+        
+        if self.statements:
+            all_lines = ["int main(int argc, char** argv) {"]
+            for stmt in self.statements:
+                all_lines.append(f"    {stmt}")
+            for line in lines[1:]:
+                all_lines.append(line)
+            return "\n".join(all_lines)
+        
         return "\n".join(lines)
     
     def _gen_expr(self, node: ASTNode) -> str:
@@ -90,30 +101,31 @@ class CodeGenerator:
         args = elements[1:]
         
         if isinstance(func, SymbolNode):
-            name = func.name
-            
-            if name == "+":
-                return self._gen_binop("lisp_add", args)
-            if name == "-":
-                return self._gen_binop("lisp_sub", args)
-            if name == "*":
-                return self._gen_binop("lisp_mul", args)
-            if name == "/":
-                return self._gen_binop("lisp_div", args)
-            if name == "=":
-                return self._gen_binop("lisp_eq", args)
-            if name == "<":
-                return self._gen_binop("lisp_lt", args)
-            if name == ">":
-                return self._gen_binop("lisp_gt", args)
-            if name == "first":
-                return f"lisp_first({self._gen_expr(args[0])})"
-            if name == "rest":
-                return f"lisp_rest({self._gen_expr(args[0])})"
-            if name == "cons":
-                return f"lisp_cons({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
-            if name == "print":
-                return f"lisp_print({self._gen_expr(args[0])})"
+            match func.name:
+                case "+":
+                    return self._gen_binop("lisp_add", args)
+                case "-":
+                    return self._gen_binop("lisp_sub", args)
+                case "*":
+                    return self._gen_binop("lisp_mul", args)
+                case "/":
+                    return self._gen_binop("lisp_div", args)
+                case "=":
+                    return self._gen_binop("lisp_eq", args)
+                case "<":
+                    return self._gen_binop("lisp_lt", args)
+                case ">":
+                    return self._gen_binop("lisp_gt", args)
+                case "first":
+                    return f"lisp_first({self._gen_expr(args[0])})"
+                case "rest":
+                    return f"lisp_rest({self._gen_expr(args[0])})"
+                case "cons":
+                    return f"lisp_cons({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
+                case "print":
+                    return f"lisp_print({self._gen_expr(args[0])})"
+                case _:
+                    return "NULL"
         
         return "NULL"
     
@@ -132,12 +144,16 @@ class CodeGenerator:
         temp = f"__result_{self.temp_counter}"
         self.temp_counter += 1
         
-        lines = [
-            f"LispValue* {temp} = NULL",
-            f"if (lisp_is_true({self._gen_expr(node.condition)})) {{",
-            f"    {temp} = {self._gen_expr(node.then_branch)};",
-            "} else {",
-            f"    {temp} = {self._gen_expr(node.else_branch)};",
-            "}"
-        ]
-        return "\n        ".join(lines)
+        self.statements.append(f"LispValue* {temp} = NULL;")
+        
+        cond = self._gen_expr(node.condition)
+        then_val = self._gen_expr(node.then_branch)
+        else_val = self._gen_expr(node.else_branch)
+        
+        self.statements.append(f"if (lisp_is_true({cond})) {{")
+        self.statements.append(f"    {temp} = {then_val};")
+        self.statements.append("} else {")
+        self.statements.append(f"    {temp} = {else_val};")
+        self.statements.append("}")
+        
+        return temp

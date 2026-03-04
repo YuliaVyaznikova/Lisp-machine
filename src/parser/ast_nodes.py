@@ -28,7 +28,7 @@ class SymbolNode(ASTNode):
 
 @dataclass
 class NilNode(ASTNode):
-    pass
+    location: Optional[Location] = None
 
 @dataclass
 class ListNode(ASTNode):

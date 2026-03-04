@@ -99,7 +99,7 @@ void test_lists() {
 }
 
 int main() {
-    printf("=== Lisp Runtime Tests ===\n\n");
+    printf("=== Runtime Tests ===\n\n");
     
     test_integers();
     test_floats();
@@ -110,6 +110,6 @@ int main() {
     test_comparisons();
     test_lists();
     
-    printf("\n=== All tests passed! ===\n");
+    printf("\n=== All tests passed ===\n");
     return 0;
 }

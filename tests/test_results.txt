@@ -9,7 +9,7 @@ Arithmetic: OK
 Comparisons: OK
 Lists: OK
 
-=== All tests passed! ===
+=== All tests passed ===
 ============================= test session starts ==============================
 platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
 cachedir: .pytest_cache
@@ -36,14 +36,133 @@ tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 89%]
 tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 94%]
 tests/test_parser.py::TestExamples::test_quotes_example PASSED           [100%]
 
-============================== 19 passed in 0.10s ==============================
-#include <stdio.h>
-#include <stdlib.h>
-#include "runtime/lisp.h"
+============================== 19 passed in 0.11s ==============================
+"Hello, World!"
+6
+42
+true
+true
+true
+false
+1
+1
+"less"
+(1 2 3)
+1
+(2)
+foo
+(1 2 3)
+nil
+=== All tests passed ===
+=== Lisp Runtime Tests ===
 
-/* Forward declarations */
+Integers: OK
+Floats: OK
+Strings: OK
+Symbols: OK
+Cons: OK
+Arithmetic: OK
+Comparisons: OK
+Lists: OK
 
-int main(int argc, char** argv) {
-    lisp_print(lisp_make_string("Hello, World!"));
-    return 0;
-}=== All tests passed! ===
+=== All tests passed ===
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /app
+collecting ... collected 19 items
+
+tests/test_parser.py::TestTokenizer::test_tokenize_numbers PASSED        [  5%]
+tests/test_parser.py::TestTokenizer::test_tokenize_symbols PASSED        [ 10%]
+tests/test_parser.py::TestTokenizer::test_tokenize_strings PASSED        [ 15%]
+tests/test_parser.py::TestTokenizer::test_tokenize_parens PASSED         [ 21%]
+tests/test_parser.py::TestParser::test_parse_int PASSED                  [ 26%]
+tests/test_parser.py::TestParser::test_parse_symbol PASSED               [ 31%]
+tests/test_parser.py::TestParser::test_parse_list PASSED                 [ 36%]
+tests/test_parser.py::TestParser::test_parse_if PASSED                   [ 42%]
+tests/test_parser.py::TestParser::test_parse_nil PASSED                  [ 47%]
+tests/test_parser.py::TestParser::test_parse_quote PASSED                [ 52%]
+tests/test_parser.py::TestGenerator::test_generate_int PASSED            [ 57%]
+tests/test_parser.py::TestGenerator::test_generate_arithmetic PASSED     [ 63%]
+tests/test_parser.py::TestGenerator::test_generate_if PASSED             [ 68%]
+tests/test_parser.py::TestExamples::test_hello_example PASSED            [ 73%]
+tests/test_parser.py::TestExamples::test_arithmetic_example PASSED       [ 78%]
+tests/test_parser.py::TestExamples::test_comparisons_example PASSED      [ 84%]
+tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 89%]
+tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 94%]
+tests/test_parser.py::TestExamples::test_quotes_example PASSED           [100%]
+
+============================== 19 passed in 0.11s ==============================
+"Hello, World!"
+6
+42
+true
+true
+true
+false
+1
+1
+"less"
+(1 2 3)
+1
+(2)
+foo
+(1 2 3)
+nil
+=== All tests passed ===
+=== Runtime Tests ===
+
+Integers: OK
+Floats: OK
+Strings: OK
+Symbols: OK
+Cons: OK
+Arithmetic: OK
+Comparisons: OK
+Lists: OK
+
+=== All tests passed ===
+============================= test session starts ==============================
+platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /app
+collecting ... collected 19 items
+
+tests/test_parser.py::TestTokenizer::test_tokenize_numbers PASSED        [  5%]
+tests/test_parser.py::TestTokenizer::test_tokenize_symbols PASSED        [ 10%]
+tests/test_parser.py::TestTokenizer::test_tokenize_strings PASSED        [ 15%]
+tests/test_parser.py::TestTokenizer::test_tokenize_parens PASSED         [ 21%]
+tests/test_parser.py::TestParser::test_parse_int PASSED                  [ 26%]
+tests/test_parser.py::TestParser::test_parse_symbol PASSED               [ 31%]
+tests/test_parser.py::TestParser::test_parse_list PASSED                 [ 36%]
+tests/test_parser.py::TestParser::test_parse_if PASSED                   [ 42%]
+tests/test_parser.py::TestParser::test_parse_nil PASSED                  [ 47%]
+tests/test_parser.py::TestParser::test_parse_quote PASSED                [ 52%]
+tests/test_parser.py::TestGenerator::test_generate_int PASSED            [ 57%]
+tests/test_parser.py::TestGenerator::test_generate_arithmetic PASSED     [ 63%]
+tests/test_parser.py::TestGenerator::test_generate_if PASSED             [ 68%]
+tests/test_parser.py::TestExamples::test_hello_example PASSED            [ 73%]
+tests/test_parser.py::TestExamples::test_arithmetic_example PASSED       [ 78%]
+tests/test_parser.py::TestExamples::test_comparisons_example PASSED      [ 84%]
+tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 89%]
+tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 94%]
+tests/test_parser.py::TestExamples::test_quotes_example PASSED           [100%]
+
+============================== 19 passed in 0.14s ==============================
+"Hello, World!"
+6
+42
+true
+true
+true
+false
+1
+1
+"less"
+(1 2 3)
+1
+(2)
+foo
+(1 2 3)
+nil
+=== All tests passed ===

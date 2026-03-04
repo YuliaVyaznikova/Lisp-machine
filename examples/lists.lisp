@@ -1,5 +1,3 @@
-(define my-list (cons 1 (cons 2 (cons 3 nil))))
-(print my-list)
-(print (first my-list))
-(print (first (rest my-list)))
-(print (first (rest (rest my-list))))
+(print (cons 1 (cons 2 (cons 3 nil))))
+(print (first (cons 1 (cons 2 nil))))
+(print (rest (cons 1 (cons 2 nil))))
