@@ -131,4 +131,16 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     gcc build/lambda.c build/lisp.o -I. -o build/lambda && \
     ./build/lambda 2>&1 | tee -a tests/test_results.txt && \
     echo "" && \
+    echo "--- closure.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/closure.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/closure.lisp -o build/closure.c && \
+    cat build/closure.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/closure.c build/lisp.o -I. -o build/closure && \
+    ./build/closure 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
     echo "=== All tests passed ===" | tee -a tests/test_results.txt

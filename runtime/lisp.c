@@ -54,6 +54,27 @@ LispValue* lisp_rest(LispValue* pair) {
     return pair->data.pair.cdr;
 }
 
+LispValue* lisp_list_get(LispValue* list, int index) {
+    LispValue* curr = list;
+    for (int i = 0; i < index && curr && curr->type == LISP_PAIR; i++) {
+        curr = curr->data.pair.cdr;
+    }
+    if (curr && curr->type == LISP_PAIR) {
+        return curr->data.pair.car;
+    }
+    return NULL;
+}
+
+int lisp_list_length(LispValue* list) {
+    int len = 0;
+    LispValue* curr = list;
+    while (curr && curr->type == LISP_PAIR) {
+        len++;
+        curr = curr->data.pair.cdr;
+    }
+    return len;
+}
+
 static double to_float(LispValue* val) {
     if (!val) return 0.0;
     if (val->type == LISP_INT) return (double)val->data.int_val;
@@ -246,4 +267,20 @@ LispValue* lisp_env_lookup(LispValue* env, const char* name) {
 
 LispValue* lisp_env_extend(LispValue* env, const char* name, LispValue* value) {
     return lisp_make_binding(name, value, env);
+}
+
+LispValue* lisp_make_closure(void* func_ptr, LispValue* env) {
+    LispValue* val = alloc_value(LISP_CLOSURE);
+    val->data.closure.func_ptr = func_ptr;
+    val->data.closure.env = env;
+    if (env) lisp_retain(env);
+    return val;
+}
+
+typedef LispValue* (*ClosureFunc)(LispValue* args, LispValue* env);
+
+LispValue* lisp_call_closure(LispValue* closure, LispValue* args) {
+    if (!closure || closure->type != LISP_CLOSURE) return NULL;
+    ClosureFunc func = (ClosureFunc)closure->data.closure.func_ptr;
+    return func(args, closure->data.closure.env);
 }
