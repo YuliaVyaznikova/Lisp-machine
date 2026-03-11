@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 static LispValue* alloc_value(LispType type) {
     LispValue* val = (LispValue*)malloc(sizeof(LispValue));
@@ -75,6 +76,25 @@ int lisp_list_length(LispValue* list) {
     return len;
 }
 
+LispValue* lisp_length(LispValue* list) {
+    return lisp_make_int(lisp_list_length(list));
+}
+
+LispValue* lisp_append(LispValue* lst1, LispValue* lst2) {
+    if (!lst1 || lst1->type != LISP_PAIR) return lst2;
+    return lisp_cons(lst1->data.pair.car, lisp_append(lst1->data.pair.cdr, lst2));
+}
+
+LispValue* lisp_reverse(LispValue* lst) {
+    LispValue* result = NULL;
+    LispValue* curr = lst;
+    while (curr && curr->type == LISP_PAIR) {
+        result = lisp_cons(curr->data.pair.car, result);
+        curr = curr->data.pair.cdr;
+    }
+    return result;
+}
+
 static double to_float(LispValue* val) {
     if (!val) return 0.0;
     if (val->type == LISP_INT) return (double)val->data.int_val;
@@ -143,12 +163,42 @@ LispValue* lisp_gt(LispValue* a, LispValue* b) {
     return to_float(a) > to_float(b) ? LISP_TRUE : LISP_FALSE;
 }
 
+LispValue* lisp_not(LispValue* val) {
+    return lisp_is_true(val) ? LISP_FALSE : LISP_TRUE;
+}
+
+LispValue* lisp_mod(LispValue* a, LispValue* b) {
+    if (!a || !b) return NULL;
+    return lisp_make_int(to_int(a) % to_int(b));
+}
+
+LispValue* lisp_abs(LispValue* val) {
+    if (!val) return NULL;
+    if (val->type == LISP_FLOAT) return lisp_make_float(fabs(val->data.float_val));
+    int64_t v = to_int(val);
+    return lisp_make_int(v < 0 ? -v : v);
+}
+
+LispValue* lisp_min(LispValue* a, LispValue* b) {
+    if (!a || !b) return NULL;
+    return to_float(a) < to_float(b) ? a : b;
+}
+
+LispValue* lisp_max(LispValue* a, LispValue* b) {
+    if (!a || !b) return NULL;
+    return to_float(a) > to_float(b) ? a : b;
+}
+
 bool lisp_is_nil(LispValue* val) {
     return val == NULL || val->type == LISP_NIL;
 }
 
 bool lisp_is_true(LispValue* val) {
     return val != NULL && val != LISP_FALSE;
+}
+
+LispValue* lisp_is_nil_fn(LispValue* val) {
+    return lisp_is_nil(val) ? LISP_TRUE : LISP_FALSE;
 }
 
 void lisp_retain(LispValue* val) {
@@ -334,5 +384,66 @@ LispValue* lisp_apply(LispValue* func, LispValue* args) {
         }
     }
     
+    return NULL;
+}
+
+LispValue* lisp_add_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* a = lisp_list_get(__args, 0);
+    LispValue* b = lisp_list_get(__args, 1);
+    return lisp_add(a, b);
+}
+
+LispValue* lisp_sub_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* a = lisp_list_get(__args, 0);
+    LispValue* b = lisp_list_get(__args, 1);
+    return lisp_sub(a, b);
+}
+
+LispValue* lisp_mul_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* a = lisp_list_get(__args, 0);
+    LispValue* b = lisp_list_get(__args, 1);
+    return lisp_mul(a, b);
+}
+
+LispValue* lisp_div_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* a = lisp_list_get(__args, 0);
+    LispValue* b = lisp_list_get(__args, 1);
+    return lisp_div(a, b);
+}
+
+LispValue* lisp_eq_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* a = lisp_list_get(__args, 0);
+    LispValue* b = lisp_list_get(__args, 1);
+    return lisp_eq(a, b);
+}
+
+LispValue* lisp_lt_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* a = lisp_list_get(__args, 0);
+    LispValue* b = lisp_list_get(__args, 1);
+    return lisp_lt(a, b);
+}
+
+LispValue* lisp_gt_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* a = lisp_list_get(__args, 0);
+    LispValue* b = lisp_list_get(__args, 1);
+    return lisp_gt(a, b);
+}
+
+LispValue* lisp_first_wrapper(LispValue* __args, LispValue* __env) {
+    return lisp_first(lisp_list_get(__args, 0));
+}
+
+LispValue* lisp_rest_wrapper(LispValue* __args, LispValue* __env) {
+    return lisp_rest(lisp_list_get(__args, 0));
+}
+
+LispValue* lisp_cons_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* a = lisp_list_get(__args, 0);
+    LispValue* b = lisp_list_get(__args, 1);
+    return lisp_cons(a, b);
+}
+
+LispValue* lisp_print_wrapper(LispValue* __args, LispValue* __env) {
+    lisp_print(lisp_list_get(__args, 0));
     return NULL;
 }

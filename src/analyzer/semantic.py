@@ -30,7 +30,7 @@ class SymbolTable:
         return self.lookup(name) is not None
 
 class SemanticAnalyzer:
-    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'apply'}
+    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'apply', 'while', 'set!', 'length', 'append', 'reverse', 'not', 'mod', 'abs', 'min', 'max', 'nil?'}
     
     def __init__(self):
         self.global_table = SymbolTable()
@@ -90,6 +90,18 @@ class SemanticAnalyzer:
             for param in node.params:
                 local_table.define(param, 'parameter')
             self._analyze_node(node.body, local_table)
+            return
+        
+        if isinstance(node, WhileNode):
+            self._analyze_node(node.condition, table)
+            for body_node in node.body:
+                self._analyze_node(body_node, table)
+            return
+        
+        if isinstance(node, SetNode):
+            if not table.has(node.name):
+                self.warnings.append(f"set! on undefined variable: {node.name}")
+            self._analyze_node(node.value, table)
             return
     
     def _analyze_list(self, node: ListNode, table: SymbolTable):

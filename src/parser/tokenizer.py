@@ -4,6 +4,9 @@ class TokenType(Enum):
     LPAREN = auto()
     RPAREN = auto()
     QUOTE = auto()
+    QUASIQUOTE = auto()
+    UNQUOTE = auto()
+    UNQUOTE_SPLICING = auto()
     NUMBER = auto()
     FLOAT = auto()
     STRING = auto()
@@ -59,6 +62,23 @@ def tokenize(source: str) -> list:
         
         if c == "'":
             tokens.append(Token(TokenType.QUOTE, "'", line, col))
+            i += 1
+            col += 1
+            continue
+        
+        if c == '`':
+            tokens.append(Token(TokenType.QUASIQUOTE, '`', line, col))
+            i += 1
+            col += 1
+            continue
+        
+        if c == '~':
+            if i + 1 < len(source) and source[i + 1] == '@':
+                tokens.append(Token(TokenType.UNQUOTE_SPLICING, '~@', line, col))
+                i += 2
+                col += 2
+                continue
+            tokens.append(Token(TokenType.UNQUOTE, '~', line, col))
             i += 1
             col += 1
             continue

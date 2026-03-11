@@ -13,9 +13,23 @@ class CodeGenerator:
         self.statements = []
         self.variables = {}
         self.functions = []
+        self.func_names = set()
         self.func_counter = 0
         self.local_vars = set()
         self.closures = []
+        self.builtin_wrappers = {
+            '+': 'lisp_add_wrapper',
+            '-': 'lisp_sub_wrapper',
+            '*': 'lisp_mul_wrapper',
+            '/': 'lisp_div_wrapper',
+            '=': 'lisp_eq_wrapper',
+            '<': 'lisp_lt_wrapper',
+            '>': 'lisp_gt_wrapper',
+            'first': 'lisp_first_wrapper',
+            'rest': 'lisp_rest_wrapper',
+            'cons': 'lisp_cons_wrapper',
+            'print': 'lisp_print_wrapper',
+        }
     
     def _find_free_vars(self, node: ASTNode, bound: set) -> set:
         if isinstance(node, IntNode) or isinstance(node, FloatNode) or isinstance(node, StringNode) or isinstance(node, NilNode):
@@ -60,6 +74,7 @@ class CodeGenerator:
         self.statements = []
         self.variables = {}
         self.functions = []
+        self.func_names = set()
         self.local_vars = set()
         self.func_counter = 0
         
@@ -80,7 +95,7 @@ class CodeGenerator:
 #include "runtime/lisp.h"'''
     
     def _mangle_name(self, name: str) -> str:
-        return name.replace('-', '_')
+        return name.replace('-', '_').replace('?', '_p')
     
     def _forward_decls(self, nodes: List[ASTNode]) -> str:
         decls = []
@@ -106,26 +121,38 @@ class CodeGenerator:
                     self.variables[node.name] = node.value
     
     def _gen_function(self, node: DefineNode):
+        mangled = self._mangle_name(node.name)
+        self.func_names.add(mangled)
         self.temp_counter = 0
         self.local_vars = set(node.params)
+        self.statements = []
         func_stmts = []
         
         params_str = ", ".join(["LispValue* " + p for p in node.params])
-        func_stmts.append(f"LispValue* {self._mangle_name(node.name)}({params_str}) {{")
+        func_stmts.append(f"LispValue* {mangled}({params_str}) {{")
         
         body_expr = self._gen_expr(node.body)
+        for stmt in self.statements:
+            func_stmts.append(f"    {stmt}")
         if body_expr:
             func_stmts.append(f"    return {body_expr};")
         else:
             func_stmts.append("    return NULL;")
         func_stmts.append("}")
         
+        wrapper_stmts = [f"LispValue* {mangled}_wrapper(LispValue* __args, LispValue* __env) {{"]
+        for i, p in enumerate(node.params):
+            wrapper_stmts.append(f"    LispValue* {p} = lisp_list_get(__args, {i});")
+        args_str = ", ".join(node.params)
+        wrapper_stmts.append(f"    return {mangled}({args_str});")
+        wrapper_stmts.append("}")
+        
         self.functions.append("\n".join(func_stmts))
+        self.functions.append("\n".join(wrapper_stmts))
         self.local_vars = set()
     
     def _main(self, nodes: List[ASTNode]) -> str:
         lines = ["int main(int argc, char** argv) {"]
-        self.indent = 1
         
         for name in self.variables:
             lines.append(f"    LispValue* {self._mangle_name(name)} = NULL;")
@@ -135,22 +162,17 @@ class CodeGenerator:
                 expr = self._gen_expr(node.value)
                 lines.append(f"    {self._mangle_name(node.name)} = {expr};")
             elif not isinstance(node, DefineNode):
-                expr = self._gen_expr(node)
-                if expr:
-                    lines.append(f"    {expr};")
+                self.statements = []
+                result = self._gen_expr(node)
+                for stmt in self.statements:
+                    lines.append(f"    {stmt}")
+                if result and result.startswith("__"):
+                    pass
+                elif result and result != "NULL":
+                    lines.append(f"    {result};")
         
         lines.append("    return 0;")
         lines.append("}")
-        
-        if self.statements:
-            all_lines = ["int main(int argc, char** argv) {"]
-            for name in self.variables:
-                all_lines.append(f"    LispValue* {self._mangle_name(name)} = NULL;")
-            for stmt in self.statements:
-                all_lines.append(f"    {stmt}")
-            for line in lines[1 + len(self.variables):]:
-                all_lines.append(line)
-            return "\n".join(all_lines)
         
         return "\n".join(lines)
     
@@ -169,6 +191,11 @@ class CodeGenerator:
                 return self._mangle_name(node.name)
             if node.name in self.local_vars:
                 return node.name
+            if node.name in self.builtin_wrappers:
+                return f"lisp_make_closure({self.builtin_wrappers[node.name]}, NULL)"
+            mangled = self._mangle_name(node.name)
+            if mangled in self.func_names:
+                return f"lisp_make_closure({mangled}_wrapper, NULL)"
             return f'lisp_make_symbol("{node.name}")'
         
         if isinstance(node, NilNode):
@@ -188,6 +215,12 @@ class CodeGenerator:
         
         if isinstance(node, LambdaNode):
             return self._gen_lambda(node)
+        
+        if isinstance(node, WhileNode):
+            return self._gen_while(node)
+        
+        if isinstance(node, SetNode):
+            return self._gen_set(node)
         
         return "NULL"
     
@@ -246,6 +279,24 @@ class CodeGenerator:
                     return f"lisp_rest({self._gen_expr(args[0])})"
                 case "cons":
                     return f"lisp_cons({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
+                case "length":
+                    return f"lisp_length({self._gen_expr(args[0])})"
+                case "append":
+                    return f"lisp_append({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
+                case "reverse":
+                    return f"lisp_reverse({self._gen_expr(args[0])})"
+                case "not":
+                    return f"lisp_not({self._gen_expr(args[0])})"
+                case "mod":
+                    return f"lisp_mod({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
+                case "abs":
+                    return f"lisp_abs({self._gen_expr(args[0])})"
+                case "min":
+                    return f"lisp_min({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
+                case "max":
+                    return f"lisp_max({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
+                case "nil?":
+                    return f"lisp_is_nil_fn({self._gen_expr(args[0])})"
                 case "print":
                     return f"lisp_print({self._gen_expr(args[0])})"
                 case "apply":
@@ -254,13 +305,15 @@ class CodeGenerator:
                     return f"lisp_apply({func_expr}, {args_expr})"
                 case _:
                     mangled = self._mangle_name(func.name)
-                    for node in self.functions:
-                        if node.startswith(f"LispValue* {mangled}("):
-                            args_str = ", ".join(self._gen_expr(a) for a in args)
-                            return f"{mangled}({args_str})"
+                    if mangled in self.func_names:
+                        args_str = ", ".join(self._gen_expr(a) for a in args)
+                        return f"{mangled}({args_str})"
                     if func.name in self.variables:
                         args_list = self._build_args_list(args)
                         return f"lisp_call_closure({self._mangle_name(func.name)}, {args_list})"
+                    if func.name in self.local_vars:
+                        args_list = self._build_args_list(args)
+                        return f"lisp_call_closure({func.name}, {args_list})"
                     return "NULL"
         
         return "NULL"
@@ -292,12 +345,25 @@ class CodeGenerator:
         self.statements.append(f"LispValue* {temp} = NULL;")
         
         cond = self._gen_expr(node.condition)
+        
+        saved_stmts = self.statements.copy()
+        self.statements = []
         then_val = self._gen_expr(node.then_branch)
+        then_stmts = self.statements
+        self.statements = saved_stmts
+        
+        self.statements = []
         else_val = self._gen_expr(node.else_branch)
+        else_stmts = self.statements
+        self.statements = saved_stmts
         
         self.statements.append(f"if (lisp_is_true({cond})) {{")
+        for stmt in then_stmts:
+            self.statements.append(f"    {stmt}")
         self.statements.append(f"    {temp} = {then_val};")
         self.statements.append("} else {")
+        for stmt in else_stmts:
+            self.statements.append(f"    {stmt}")
         self.statements.append(f"    {temp} = {else_val};")
         self.statements.append("}")
         
@@ -334,3 +400,24 @@ class CodeGenerator:
         for fv in sorted(free_vars):
             env_build = f'lisp_env_extend({env_build}, "{fv}", {fv})'
         return f"lisp_make_closure({func_name}, {env_build})"
+    
+    def _gen_while(self, node: WhileNode) -> str:
+        temp = f"__while_result_{self.temp_counter}"
+        self.temp_counter += 1
+        
+        self.statements.append(f"LispValue* {temp} = NULL;")
+        self.statements.append(f"while (lisp_is_true({self._gen_expr(node.condition)})) {{")
+        
+        for body_node in node.body:
+            body_expr = self._gen_expr(body_node)
+            if body_expr:
+                self.statements.append(f"    {body_expr};")
+        
+        self.statements.append("}")
+        
+        return temp
+    
+    def _gen_set(self, node: SetNode) -> str:
+        value_expr = self._gen_expr(node.value)
+        var_name = self._mangle_name(node.name)
+        return f"{var_name} = {value_expr}"

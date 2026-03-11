@@ -7,12 +7,15 @@ sys.path.insert(0, str(Path(__file__).parent))
 from parser import parse
 from generator import CodeGenerator
 from analyzer import SemanticAnalyzer
+from macro import expand_macros
 
 def compile_file(input_path: str, output_path: str):
     with open(input_path, 'r', encoding='utf-8') as f:
         source = f.read()
     
     ast = parse(source)
+    
+    ast = expand_macros(ast)
     
     analyzer = SemanticAnalyzer()
     if not analyzer.analyze(ast):

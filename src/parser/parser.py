@@ -66,11 +66,54 @@ class LambdaHandler(SpecialFormHandler):
         body = elements[2]
         return LambdaNode(params=params, body=body)
 
+class WhileHandler(SpecialFormHandler):
+    def can_handle(self, name: str) -> bool:
+        return name == "while"
+    
+    def parse(self, elements: list, start: Token) -> ASTNode:
+        if len(elements) < 3:
+            raise ParseError("while requires condition and body", start)
+        condition = elements[1]
+        body = elements[2:]
+        return WhileNode(condition=condition, body=body)
+
+class SetHandler(SpecialFormHandler):
+    def can_handle(self, name: str) -> bool:
+        return name == "set!"
+    
+    def parse(self, elements: list, start: Token) -> ASTNode:
+        if len(elements) != 3:
+            raise ParseError("set! requires name and value", start)
+        if not isinstance(elements[1], SymbolNode):
+            raise ParseError("set! requires a symbol", start)
+        return SetNode(name=elements[1].name, value=elements[2])
+
+class DefmacroHandler(SpecialFormHandler):
+    def can_handle(self, name: str) -> bool:
+        return name == "defmacro"
+    
+    def parse(self, elements: list, start: Token) -> ASTNode:
+        if len(elements) < 3:
+            raise ParseError("defmacro requires name and body", start)
+        
+        second = elements[1]
+        if isinstance(second, SymbolNode):
+            return DefmacroNode(name=second.name, body=elements[2])
+        
+        if isinstance(second, ListNode):
+            if not second.elements or not isinstance(second.elements[0], SymbolNode):
+                raise ParseError("defmacro requires name", start)
+            name = second.elements[0].name
+            params = [p.name for p in second.elements[1:] if isinstance(p, SymbolNode)]
+            return DefmacroNode(name=name, params=params, body=elements[2])
+        
+        raise ParseError("invalid defmacro syntax", start)
+
 class Parser:
     def __init__(self, tokens: list):
         self.tokens = tokens
         self.pos = 0
-        self.handlers = [IfHandler(), DefineHandler(), LambdaHandler()]
+        self.handlers = [IfHandler(), DefineHandler(), LambdaHandler(), WhileHandler(), SetHandler(), DefmacroHandler()]
     
     def current(self) -> Token:
         if self.pos < len(self.tokens):
@@ -123,6 +166,18 @@ class Parser:
             self.advance()
             return QuoteNode(value=self.parse_expr())
         
+        if tok.type == TokenType.QUASIQUOTE:
+            self.advance()
+            return self._parse_quasiquote(self.parse_expr())
+        
+        if tok.type == TokenType.UNQUOTE:
+            self.advance()
+            return UnquoteNode(value=self.parse_expr())
+        
+        if tok.type == TokenType.UNQUOTE_SPLICING:
+            self.advance()
+            return UnquoteSplicingNode(value=self.parse_expr())
+        
         if tok.type == TokenType.LPAREN:
             return self.parse_list()
         
@@ -150,6 +205,23 @@ class Parser:
                     return handler.parse(elements, start)
         
         return ListNode(elements=elements)
+
+    def _parse_quasiquote(self, node: ASTNode) -> ASTNode:
+        if isinstance(node, UnquoteNode):
+            return node
+        if isinstance(node, UnquoteSplicingNode):
+            return node
+        if isinstance(node, ListNode):
+            new_elements = []
+            for elem in node.elements:
+                if isinstance(elem, UnquoteSplicingNode):
+                    new_elements.append(elem)
+                elif isinstance(elem, UnquoteNode):
+                    new_elements.append(elem)
+                else:
+                    new_elements.append(self._parse_quasiquote(elem))
+            return ListNode(elements=new_elements)
+        return QuoteNode(value=node)
 
 def parse(source: str) -> list:
     tokens = tokenize(source)

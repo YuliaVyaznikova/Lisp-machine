@@ -72,3 +72,33 @@ class LambdaNode(ASTNode):
     def __post_init__(self):
         if self.params is None:
             self.params = []
+
+@dataclass
+class WhileNode(ASTNode):
+    condition: ASTNode = None
+    body: List[ASTNode] = None
+    def __post_init__(self):
+        if self.body is None:
+            self.body = []
+
+@dataclass
+class SetNode(ASTNode):
+    name: str = ""
+    value: ASTNode = None
+
+@dataclass
+class DefmacroNode(ASTNode):
+    name: str = ""
+    params: List[str] = None
+    body: ASTNode = None
+    def __post_init__(self):
+        if self.params is None:
+            self.params = []
+
+@dataclass
+class UnquoteNode(ASTNode):
+    value: ASTNode = None
+
+@dataclass
+class UnquoteSplicingNode(ASTNode):
+    value: ASTNode = None

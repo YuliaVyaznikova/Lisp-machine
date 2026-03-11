@@ -15,11 +15,13 @@ COPY . /app/
 RUN mkdir -p build && \
     gcc -Wall -Wextra -std=c11 -c runtime/lisp.c -o build/lisp.o
 
-CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
-    ./build/test_runtime 2>&1 | tee -a tests/test_results.txt && \
+CMD { \
+    echo "=== Runtime Tests ===" && \
+    gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
+    ./build/test_runtime && \
     echo "" && \
     echo "=== Python parser tests ===" && \
-    python3 -m pytest tests/test_parser.py -v 2>&1 | tee -a tests/test_results.txt && \
+    python3 -m pytest tests/test_parser.py -v && \
     echo "" && \
     echo "=== End-to-End tests ===" && \
     echo "" && \
@@ -33,7 +35,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/hello.c build/lisp.o -I. -o build/hello && \
-    ./build/hello 2>&1 | tee -a tests/test_results.txt && \
+    ./build/hello && \
     echo "" && \
     echo "--- arithmetic.lisp ---" && \
     echo "Lisp source:" && \
@@ -45,7 +47,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/arithmetic.c build/lisp.o -I. -o build/arithmetic && \
-    ./build/arithmetic 2>&1 | tee -a tests/test_results.txt && \
+    ./build/arithmetic && \
     echo "" && \
     echo "--- comparisons.lisp ---" && \
     echo "Lisp source:" && \
@@ -57,7 +59,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/comparisons.c build/lisp.o -I. -o build/comparisons && \
-    ./build/comparisons 2>&1 | tee -a tests/test_results.txt && \
+    ./build/comparisons && \
     echo "" && \
     echo "--- conditionals.lisp ---" && \
     echo "Lisp source:" && \
@@ -69,7 +71,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/conditionals.c build/lisp.o -I. -o build/conditionals && \
-    ./build/conditionals 2>&1 | tee -a tests/test_results.txt && \
+    ./build/conditionals && \
     echo "" && \
     echo "--- lists.lisp ---" && \
     echo "Lisp source:" && \
@@ -81,7 +83,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/lists.c build/lisp.o -I. -o build/lists && \
-    ./build/lists 2>&1 | tee -a tests/test_results.txt && \
+    ./build/lists && \
     echo "" && \
     echo "--- quotes.lisp ---" && \
     echo "Lisp source:" && \
@@ -93,7 +95,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/quotes.c build/lisp.o -I. -o build/quotes && \
-    ./build/quotes 2>&1 | tee -a tests/test_results.txt && \
+    ./build/quotes && \
     echo "" && \
     echo "--- define-var.lisp ---" && \
     echo "Lisp source:" && \
@@ -105,7 +107,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/define-var.c build/lisp.o -I. -o build/define-var && \
-    ./build/define-var 2>&1 | tee -a tests/test_results.txt && \
+    ./build/define-var && \
     echo "" && \
     echo "--- define-func.lisp ---" && \
     echo "Lisp source:" && \
@@ -117,7 +119,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/define-func.c build/lisp.o -I. -o build/define-func && \
-    ./build/define-func 2>&1 | tee -a tests/test_results.txt && \
+    ./build/define-func && \
     echo "" && \
     echo "--- lambda.lisp ---" && \
     echo "Lisp source:" && \
@@ -129,7 +131,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/lambda.c build/lisp.o -I. -o build/lambda && \
-    ./build/lambda 2>&1 | tee -a tests/test_results.txt && \
+    ./build/lambda && \
     echo "" && \
     echo "--- closure.lisp ---" && \
     echo "Lisp source:" && \
@@ -141,7 +143,7 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/closure.c build/lisp.o -I. -o build/closure && \
-    ./build/closure 2>&1 | tee -a tests/test_results.txt && \
+    ./build/closure && \
     echo "" && \
     echo "--- apply.lisp ---" && \
     echo "Lisp source:" && \
@@ -153,6 +155,31 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     echo "" && \
     echo "Output:" && \
     gcc build/apply.c build/lisp.o -I. -o build/apply && \
-    ./build/apply 2>&1 | tee -a tests/test_results.txt && \
+    ./build/apply && \
     echo "" && \
-    echo "=== All tests passed ===" | tee -a tests/test_results.txt
+    echo "--- while.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/while.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/while.lisp -o build/while.c && \
+    cat build/while.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/while.c build/lisp.o -I. -o build/while && \
+    ./build/while && \
+    echo "" && \
+    echo "--- stdlib.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/stdlib.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/stdlib.lisp -o build/stdlib.c && \
+    cat build/stdlib.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/stdlib.c build/lisp.o -I. -o build/stdlib && \
+    ./build/stdlib && \
+    echo "" && \
+    echo "=== All tests passed ==="; \
+} 2>&1 | tee tests/test_results.txt

@@ -51,6 +51,9 @@ LispValue* lisp_first(LispValue* pair);
 LispValue* lisp_rest(LispValue* pair);
 LispValue* lisp_list_get(LispValue* list, int index);
 int lisp_list_length(LispValue* list);
+LispValue* lisp_length(LispValue* list);
+LispValue* lisp_append(LispValue* lst1, LispValue* lst2);
+LispValue* lisp_reverse(LispValue* lst);
 
 LispValue* lisp_add(LispValue* a, LispValue* b);
 LispValue* lisp_sub(LispValue* a, LispValue* b);
@@ -61,8 +64,15 @@ LispValue* lisp_eq(LispValue* a, LispValue* b);
 LispValue* lisp_lt(LispValue* a, LispValue* b);
 LispValue* lisp_gt(LispValue* a, LispValue* b);
 
+LispValue* lisp_not(LispValue* val);
+LispValue* lisp_mod(LispValue* a, LispValue* b);
+LispValue* lisp_abs(LispValue* val);
+LispValue* lisp_min(LispValue* a, LispValue* b);
+LispValue* lisp_max(LispValue* a, LispValue* b);
+
 bool lisp_is_nil(LispValue* val);
 bool lisp_is_true(LispValue* val);
+LispValue* lisp_is_nil_fn(LispValue* val);
 
 void lisp_retain(LispValue* val);
 void lisp_release(LispValue* val);
@@ -75,5 +85,17 @@ LispValue* lisp_call_closure(LispValue* closure, LispValue* args);
 LispValue* lisp_apply(LispValue* func, LispValue* args);
 
 void lisp_print(LispValue* val);
+
+LispValue* lisp_add_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_sub_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_mul_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_div_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_eq_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_lt_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_gt_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_first_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_rest_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_cons_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_print_wrapper(LispValue* __args, LispValue* __env);
 
 #endif

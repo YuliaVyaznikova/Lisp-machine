@@ -1,0 +1,6 @@
+(define n 5)
+(define sum 0)
+(while (> n 0)
+  (set! sum (+ sum n))
+  (set! n (- n 1)))
+(print sum)

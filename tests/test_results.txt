@@ -1,115 +1,4 @@
-=== Lisp Runtime Tests ===
-
-Integers: OK
-Floats: OK
-Strings: OK
-Symbols: OK
-Cons: OK
-Arithmetic: OK
-Comparisons: OK
-Lists: OK
-
-=== All tests passed ===
-============================= test session starts ==============================
-platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
-cachedir: .pytest_cache
-rootdir: /app
-collecting ... collected 19 items
-
-tests/test_parser.py::TestTokenizer::test_tokenize_numbers PASSED        [  5%]
-tests/test_parser.py::TestTokenizer::test_tokenize_symbols PASSED        [ 10%]
-tests/test_parser.py::TestTokenizer::test_tokenize_strings PASSED        [ 15%]
-tests/test_parser.py::TestTokenizer::test_tokenize_parens PASSED         [ 21%]
-tests/test_parser.py::TestParser::test_parse_int PASSED                  [ 26%]
-tests/test_parser.py::TestParser::test_parse_symbol PASSED               [ 31%]
-tests/test_parser.py::TestParser::test_parse_list PASSED                 [ 36%]
-tests/test_parser.py::TestParser::test_parse_if PASSED                   [ 42%]
-tests/test_parser.py::TestParser::test_parse_nil PASSED                  [ 47%]
-tests/test_parser.py::TestParser::test_parse_quote PASSED                [ 52%]
-tests/test_parser.py::TestGenerator::test_generate_int PASSED            [ 57%]
-tests/test_parser.py::TestGenerator::test_generate_arithmetic PASSED     [ 63%]
-tests/test_parser.py::TestGenerator::test_generate_if PASSED             [ 68%]
-tests/test_parser.py::TestExamples::test_hello_example PASSED            [ 73%]
-tests/test_parser.py::TestExamples::test_arithmetic_example PASSED       [ 78%]
-tests/test_parser.py::TestExamples::test_comparisons_example PASSED      [ 84%]
-tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 89%]
-tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 94%]
-tests/test_parser.py::TestExamples::test_quotes_example PASSED           [100%]
-
-============================== 19 passed in 0.11s ==============================
-"Hello, World!"
-6
-42
-true
-true
-true
-false
-1
-1
-"less"
-(1 2 3)
-1
-(2)
-foo
-(1 2 3)
-nil
-=== All tests passed ===
-=== Lisp Runtime Tests ===
-
-Integers: OK
-Floats: OK
-Strings: OK
-Symbols: OK
-Cons: OK
-Arithmetic: OK
-Comparisons: OK
-Lists: OK
-
-=== All tests passed ===
-============================= test session starts ==============================
-platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
-cachedir: .pytest_cache
-rootdir: /app
-collecting ... collected 19 items
-
-tests/test_parser.py::TestTokenizer::test_tokenize_numbers PASSED        [  5%]
-tests/test_parser.py::TestTokenizer::test_tokenize_symbols PASSED        [ 10%]
-tests/test_parser.py::TestTokenizer::test_tokenize_strings PASSED        [ 15%]
-tests/test_parser.py::TestTokenizer::test_tokenize_parens PASSED         [ 21%]
-tests/test_parser.py::TestParser::test_parse_int PASSED                  [ 26%]
-tests/test_parser.py::TestParser::test_parse_symbol PASSED               [ 31%]
-tests/test_parser.py::TestParser::test_parse_list PASSED                 [ 36%]
-tests/test_parser.py::TestParser::test_parse_if PASSED                   [ 42%]
-tests/test_parser.py::TestParser::test_parse_nil PASSED                  [ 47%]
-tests/test_parser.py::TestParser::test_parse_quote PASSED                [ 52%]
-tests/test_parser.py::TestGenerator::test_generate_int PASSED            [ 57%]
-tests/test_parser.py::TestGenerator::test_generate_arithmetic PASSED     [ 63%]
-tests/test_parser.py::TestGenerator::test_generate_if PASSED             [ 68%]
-tests/test_parser.py::TestExamples::test_hello_example PASSED            [ 73%]
-tests/test_parser.py::TestExamples::test_arithmetic_example PASSED       [ 78%]
-tests/test_parser.py::TestExamples::test_comparisons_example PASSED      [ 84%]
-tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 89%]
-tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 94%]
-tests/test_parser.py::TestExamples::test_quotes_example PASSED           [100%]
-
-============================== 19 passed in 0.11s ==============================
-"Hello, World!"
-6
-42
-true
-true
-true
-false
-1
-1
-"less"
-(1 2 3)
-1
-(2)
-foo
-(1 2 3)
-nil
-=== All tests passed ===
+=== Runtime Tests ===
 === Runtime Tests ===
 
 Integers: OK
@@ -122,6 +11,8 @@ Comparisons: OK
 Lists: OK
 
 === All tests passed ===
+
+=== Python parser tests ===
 ============================= test session starts ==============================
 platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
 cachedir: .pytest_cache
@@ -148,21 +39,560 @@ tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 89%]
 tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 94%]
 tests/test_parser.py::TestExamples::test_quotes_example PASSED           [100%]
 
-============================== 19 passed in 0.14s ==============================
+============================== 19 passed in 0.16s ==============================
+
+=== End-to-End tests ===
+
+--- hello.lisp ---
+Lisp source:
+(print "Hello, World!")
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    lisp_print(lisp_make_string("Hello, World!"));
+    return 0;
+}
+Output:
 "Hello, World!"
+
+--- arithmetic.lisp ---
+Lisp source:
+(print (+ 1 2 3))
+(print (* 6 7))
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    lisp_print(lisp_add(lisp_add(lisp_make_int(1), lisp_make_int(2)), lisp_make_int(3)));
+    lisp_print(lisp_mul(lisp_make_int(6), lisp_make_int(7)));
+    return 0;
+}
+Output:
 6
 42
+
+--- comparisons.lisp ---
+Lisp source:
+(print (= 5 5))
+(print (< 3 10))
+(print (> 10 3))
+(print (= 1 2))
+
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    lisp_print(lisp_eq(lisp_make_int(5), lisp_make_int(5)));
+    lisp_print(lisp_lt(lisp_make_int(3), lisp_make_int(10)));
+    lisp_print(lisp_gt(lisp_make_int(10), lisp_make_int(3)));
+    lisp_print(lisp_eq(lisp_make_int(1), lisp_make_int(2)));
+    return 0;
+}
+Output:
 true
 true
 true
 false
+
+--- conditionals.lisp ---
+Lisp source:
+(print (if true 1 2))
+(print (if false 1 2))
+(print (if (< 3 5) "less" "greater"))
+
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    LispValue* __result_0 = NULL;
+    if (lisp_is_true(lisp_make_symbol("true"))) {
+        __result_0 = lisp_make_int(1);
+    } else {
+        __result_0 = lisp_make_int(2);
+    }
+    lisp_print(__result_0);
+    LispValue* __result_1 = NULL;
+    if (lisp_is_true(lisp_make_symbol("false"))) {
+        __result_1 = lisp_make_int(1);
+    } else {
+        __result_1 = lisp_make_int(2);
+    }
+    lisp_print(__result_1);
+    LispValue* __result_2 = NULL;
+    if (lisp_is_true(lisp_lt(lisp_make_int(3), lisp_make_int(5)))) {
+        __result_2 = lisp_make_string("less");
+    } else {
+        __result_2 = lisp_make_string("greater");
+    }
+    lisp_print(__result_2);
+    return 0;
+}
+Output:
 1
 1
 "less"
+
+--- lists.lisp ---
+Lisp source:
+(print (cons 1 (cons 2 (cons 3 nil))))
+(print (first (cons 1 (cons 2 nil))))
+(print (rest (cons 1 (cons 2 nil))))
+
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    lisp_print(lisp_cons(lisp_make_int(1), lisp_cons(lisp_make_int(2), lisp_cons(lisp_make_int(3), NULL))));
+    lisp_print(lisp_first(lisp_cons(lisp_make_int(1), lisp_cons(lisp_make_int(2), NULL))));
+    lisp_print(lisp_rest(lisp_cons(lisp_make_int(1), lisp_cons(lisp_make_int(2), NULL))));
+    return 0;
+}
+Output:
 (1 2 3)
 1
 (2)
+
+--- quotes.lisp ---
+Lisp source:
+(print 'foo)
+(print '(1 2 3))
+(print '())
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    lisp_print(lisp_make_symbol("foo"));
+    lisp_print(lisp_cons(lisp_make_int(1), lisp_cons(lisp_make_int(2), lisp_cons(lisp_make_int(3), NULL))));
+    lisp_print(NULL);
+    return 0;
+}
+Output:
 foo
 (1 2 3)
 nil
+
+--- define-var.lisp ---
+Lisp source:
+(define x 42)
+(print x)
+
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    LispValue* x = NULL;
+    x = lisp_make_int(42);
+    lisp_print(x);
+    return 0;
+}
+Output:
+42
+
+--- define-func.lisp ---
+Lisp source:
+(define (square x) (* x x))
+(print (square 5))
+(print (square 10))
+
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+LispValue* square(LispValue* x);
+
+LispValue* square(LispValue* x) {
+    return lisp_mul(x, x);
+}
+
+LispValue* square_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return square(x);
+}
+
+int main(int argc, char** argv) {
+    lisp_print(square(lisp_make_int(5)));
+    lisp_print(square(lisp_make_int(10)));
+    return 0;
+}
+Output:
+25
+100
+
+--- lambda.lisp ---
+Lisp source:
+(print ((lambda (x) (* x x)) 5))
+(print ((lambda (x y) (+ x y)) 3 7))
+
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+LispValue* __lambda_0(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return lisp_mul(x, x);
+}
+
+LispValue* __lambda_1(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    LispValue* y = lisp_list_get(__args, 1);
+    return lisp_add(x, y);
+}
+
+int main(int argc, char** argv) {
+    lisp_print(lisp_call_closure(lisp_make_closure(__lambda_0, NULL), lisp_cons(lisp_make_int(5), NULL)));
+    lisp_print(lisp_call_closure(lisp_make_closure(__lambda_1, NULL), lisp_cons(lisp_make_int(3), lisp_cons(lisp_make_int(7), NULL))));
+    return 0;
+}
+Output:
+25
+10
+
+--- closure.lisp ---
+Lisp source:
+(define (make-adder n) (lambda (x) (+ x n)))
+(define add5 (make-adder 5))
+(print (add5 10))
+
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+LispValue* make_adder(LispValue* n);
+
+LispValue* __lambda_0(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    LispValue* n = lisp_env_lookup(__env, "n");
+    return lisp_add(x, n);
+}
+
+LispValue* make_adder(LispValue* n) {
+    return lisp_make_closure(__lambda_0, lisp_env_extend(NULL, "n", n));
+}
+
+LispValue* make_adder_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* n = lisp_list_get(__args, 0);
+    return make_adder(n);
+}
+
+int main(int argc, char** argv) {
+    LispValue* add5 = NULL;
+    add5 = make_adder(lisp_make_int(5));
+    lisp_print(lisp_call_closure(add5, lisp_cons(lisp_make_int(10), NULL)));
+    return 0;
+}
+Output:
+15
+
+--- apply.lisp ---
+Lisp source:
+(print (apply + '(1 2 3)))
+(print (apply * '(2 3 4)))
+
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    lisp_print(lisp_apply(lisp_make_closure(lisp_add_wrapper, NULL), lisp_cons(lisp_make_int(1), lisp_cons(lisp_make_int(2), lisp_cons(lisp_make_int(3), NULL)))));
+    lisp_print(lisp_apply(lisp_make_closure(lisp_mul_wrapper, NULL), lisp_cons(lisp_make_int(2), lisp_cons(lisp_make_int(3), lisp_cons(lisp_make_int(4), NULL)))));
+    return 0;
+}
+Output:
+3
+6
+
+--- while.lisp ---
+Lisp source:
+(define n 5)
+(define sum 0)
+(while (> n 0)
+  (set! sum (+ sum n))
+  (set! n (- n 1)))
+(print sum)
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+
+
+
+int main(int argc, char** argv) {
+    LispValue* n = NULL;
+    LispValue* sum = NULL;
+    n = lisp_make_int(5);
+    sum = lisp_make_int(0);
+    LispValue* __while_result_0 = NULL;
+    while (lisp_is_true(lisp_gt(n, lisp_make_int(0)))) {
+        sum = lisp_add(sum, n);
+        n = lisp_sub(n, lisp_make_int(1));
+    }
+    lisp_print(sum);
+    return 0;
+}
+Output:
+15
+
+--- stdlib.lisp ---
+Lisp source:
+(define (map f lst)
+  (if (nil? lst)
+      nil
+      (cons (f (first lst)) (map f (rest lst)))))
+
+(define (filter pred lst)
+  (if (nil? lst)
+      nil
+      (if (pred (first lst))
+          (cons (first lst) (filter pred (rest lst)))
+          (filter pred (rest lst)))))
+
+(define (reduce f init lst)
+  (if (nil? lst)
+      init
+      (reduce f (f init (first lst)) (rest lst))))
+
+(define (zero? x) (= x 0))
+
+(define (positive? x) (> x 0))
+
+(define (negative? x) (< x 0))
+
+(define (even? x) (= (mod x 2) 0))
+
+(define (odd? x) (not (even? x)))
+
+(define (inc x) (+ x 1))
+
+(define (dec x) (- x 1))
+
+(define (square x) (* x x))
+
+(define (cube x) (* x x x))
+
+(print (map inc '(1 2 3 4 5)))
+(print (filter even? '(1 2 3 4 5 6 7 8)))
+(print (reduce + 0 '(1 2 3 4 5)))
+Generated C:
+#include <stdio.h>
+#include <stdlib.h>
+#include "runtime/lisp.h"
+
+/* Forward declarations */
+LispValue* map(LispValue* f, LispValue* lst);
+LispValue* filter(LispValue* pred, LispValue* lst);
+LispValue* reduce(LispValue* f, LispValue* init, LispValue* lst);
+LispValue* zero_p(LispValue* x);
+LispValue* positive_p(LispValue* x);
+LispValue* negative_p(LispValue* x);
+LispValue* even_p(LispValue* x);
+LispValue* odd_p(LispValue* x);
+LispValue* inc(LispValue* x);
+LispValue* dec(LispValue* x);
+LispValue* square(LispValue* x);
+LispValue* cube(LispValue* x);
+
+LispValue* map(LispValue* f, LispValue* lst) {
+    LispValue* __result_0 = NULL;
+    if (lisp_is_true(lisp_is_nil_fn(lst))) {
+        __result_0 = NULL;
+    } else {
+        __result_0 = lisp_cons(lisp_call_closure(f, lisp_cons(lisp_first(lst), NULL)), map(f, lisp_rest(lst)));
+    }
+    return __result_0;
+}
+
+LispValue* map_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* f = lisp_list_get(__args, 0);
+    LispValue* lst = lisp_list_get(__args, 1);
+    return map(f, lst);
+}
+
+LispValue* filter(LispValue* pred, LispValue* lst) {
+    LispValue* __result_0 = NULL;
+    if (lisp_is_true(lisp_is_nil_fn(lst))) {
+        __result_0 = NULL;
+    } else {
+        LispValue* __result_1 = NULL;
+        if (lisp_is_true(lisp_call_closure(pred, lisp_cons(lisp_first(lst), NULL)))) {
+            __result_1 = lisp_cons(lisp_first(lst), filter(pred, lisp_rest(lst)));
+        } else {
+            __result_1 = filter(pred, lisp_rest(lst));
+        }
+        __result_0 = __result_1;
+    }
+    return __result_0;
+}
+
+LispValue* filter_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* pred = lisp_list_get(__args, 0);
+    LispValue* lst = lisp_list_get(__args, 1);
+    return filter(pred, lst);
+}
+
+LispValue* reduce(LispValue* f, LispValue* init, LispValue* lst) {
+    LispValue* __result_0 = NULL;
+    if (lisp_is_true(lisp_is_nil_fn(lst))) {
+        __result_0 = init;
+    } else {
+        __result_0 = reduce(f, lisp_call_closure(f, lisp_cons(init, lisp_cons(lisp_first(lst), NULL))), lisp_rest(lst));
+    }
+    return __result_0;
+}
+
+LispValue* reduce_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* f = lisp_list_get(__args, 0);
+    LispValue* init = lisp_list_get(__args, 1);
+    LispValue* lst = lisp_list_get(__args, 2);
+    return reduce(f, init, lst);
+}
+
+LispValue* zero_p(LispValue* x) {
+    return lisp_eq(x, lisp_make_int(0));
+}
+
+LispValue* zero_p_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return zero_p(x);
+}
+
+LispValue* positive_p(LispValue* x) {
+    return lisp_gt(x, lisp_make_int(0));
+}
+
+LispValue* positive_p_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return positive_p(x);
+}
+
+LispValue* negative_p(LispValue* x) {
+    return lisp_lt(x, lisp_make_int(0));
+}
+
+LispValue* negative_p_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return negative_p(x);
+}
+
+LispValue* even_p(LispValue* x) {
+    return lisp_eq(lisp_mod(x, lisp_make_int(2)), lisp_make_int(0));
+}
+
+LispValue* even_p_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return even_p(x);
+}
+
+LispValue* odd_p(LispValue* x) {
+    return lisp_not(even_p(x));
+}
+
+LispValue* odd_p_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return odd_p(x);
+}
+
+LispValue* inc(LispValue* x) {
+    return lisp_add(x, lisp_make_int(1));
+}
+
+LispValue* inc_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return inc(x);
+}
+
+LispValue* dec(LispValue* x) {
+    return lisp_sub(x, lisp_make_int(1));
+}
+
+LispValue* dec_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return dec(x);
+}
+
+LispValue* square(LispValue* x) {
+    return lisp_mul(x, x);
+}
+
+LispValue* square_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return square(x);
+}
+
+LispValue* cube(LispValue* x) {
+    return lisp_mul(lisp_mul(x, x), x);
+}
+
+LispValue* cube_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* x = lisp_list_get(__args, 0);
+    return cube(x);
+}
+
+int main(int argc, char** argv) {
+    lisp_print(map(lisp_make_closure(inc_wrapper, NULL), lisp_cons(lisp_make_int(1), lisp_cons(lisp_make_int(2), lisp_cons(lisp_make_int(3), lisp_cons(lisp_make_int(4), lisp_cons(lisp_make_int(5), NULL)))))));
+    lisp_print(filter(lisp_make_closure(even_p_wrapper, NULL), lisp_cons(lisp_make_int(1), lisp_cons(lisp_make_int(2), lisp_cons(lisp_make_int(3), lisp_cons(lisp_make_int(4), lisp_cons(lisp_make_int(5), lisp_cons(lisp_make_int(6), lisp_cons(lisp_make_int(7), lisp_cons(lisp_make_int(8), NULL))))))))));
+    lisp_print(reduce(lisp_make_closure(lisp_add_wrapper, NULL), lisp_make_int(0), lisp_cons(lisp_make_int(1), lisp_cons(lisp_make_int(2), lisp_cons(lisp_make_int(3), lisp_cons(lisp_make_int(4), lisp_cons(lisp_make_int(5), NULL)))))));
+    return 0;
+}
+Output:
+(2 3 4 5 6)
+(2 4 6 8)
+15
+
 === All tests passed ===
