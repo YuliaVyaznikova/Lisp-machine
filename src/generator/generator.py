@@ -1,4 +1,7 @@
 from typing import List
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from parser.ast_nodes import *
 
 class CodeGenerator:
@@ -6,13 +9,27 @@ class CodeGenerator:
         self.indent = 0
         self.temp_counter = 0
         self.statements = []
+        self.variables = {}
+        self.functions = []
+        self.func_counter = 0
+        self.local_vars = set()
     
     def generate(self, nodes: List[ASTNode]) -> str:
         self.statements = []
+        self.variables = {}
+        self.functions = []
+        self.local_vars = set()
+        self.func_counter = 0
+        
+        self._collect_defines(nodes)
+        
+        main_code = self._main(nodes)
+        
         parts = []
         parts.append(self._header())
         parts.append(self._forward_decls(nodes))
-        parts.append(self._main(nodes))
+        parts.append(self._functions())
+        parts.append(main_code)
         return "\n\n".join(parts)
     
     def _header(self) -> str:
@@ -21,25 +38,72 @@ class CodeGenerator:
 #include "runtime/lisp.h"'''
     
     def _forward_decls(self, nodes: List[ASTNode]) -> str:
+        decls = []
+        for node in nodes:
+            if isinstance(node, DefineNode) and node.params:
+                params_str = ", ".join(["LispValue* " + p for p in node.params])
+                decls.append(f"LispValue* {node.name}({params_str});")
+        if decls:
+            return "/* Forward declarations */\n" + "\n".join(decls)
         return "/* Forward declarations */"
+    
+    def _functions(self) -> str:
+        if not self.functions:
+            return ""
+        return "\n\n".join(self.functions)
+    
+    def _collect_defines(self, nodes: List[ASTNode]):
+        for node in nodes:
+            if isinstance(node, DefineNode):
+                if node.params:
+                    self._gen_function(node)
+                else:
+                    self.variables[node.name] = node.value
+    
+    def _gen_function(self, node: DefineNode):
+        self.temp_counter = 0
+        self.local_vars = set(node.params)
+        func_stmts = []
+        
+        params_str = ", ".join(["LispValue* " + p for p in node.params])
+        func_stmts.append(f"LispValue* {node.name}({params_str}) {{")
+        
+        body_expr = self._gen_expr(node.body)
+        if body_expr:
+            func_stmts.append(f"    return {body_expr};")
+        else:
+            func_stmts.append("    return NULL;")
+        func_stmts.append("}")
+        
+        self.functions.append("\n".join(func_stmts))
+        self.local_vars = set()
     
     def _main(self, nodes: List[ASTNode]) -> str:
         lines = ["int main(int argc, char** argv) {"]
         self.indent = 1
         
+        for name in self.variables:
+            lines.append(f"    LispValue* {name} = NULL;")
+        
         for node in nodes:
-            expr = self._gen_expr(node)
-            if expr:
-                lines.append(f"    {expr};")
+            if isinstance(node, DefineNode) and not node.params:
+                expr = self._gen_expr(node.value)
+                lines.append(f"    {node.name} = {expr};")
+            elif not isinstance(node, DefineNode):
+                expr = self._gen_expr(node)
+                if expr:
+                    lines.append(f"    {expr};")
         
         lines.append("    return 0;")
         lines.append("}")
         
         if self.statements:
             all_lines = ["int main(int argc, char** argv) {"]
+            for name in self.variables:
+                all_lines.append(f"    LispValue* {name} = NULL;")
             for stmt in self.statements:
                 all_lines.append(f"    {stmt}")
-            for line in lines[1:]:
+            for line in lines[1 + len(self.variables):]:
                 all_lines.append(line)
             return "\n".join(all_lines)
         
@@ -56,6 +120,8 @@ class CodeGenerator:
             return f'lisp_make_string("{node.value}")'
         
         if isinstance(node, SymbolNode):
+            if node.name in self.variables or node.name in self.local_vars:
+                return node.name
             return f'lisp_make_symbol("{node.name}")'
         
         if isinstance(node, NilNode):
@@ -69,6 +135,12 @@ class CodeGenerator:
         
         if isinstance(node, IfNode):
             return self._gen_if(node)
+        
+        if isinstance(node, DefineNode):
+            return None
+        
+        if isinstance(node, LambdaNode):
+            return self._gen_lambda(node)
         
         return "NULL"
     
@@ -100,6 +172,11 @@ class CodeGenerator:
         func = elements[0]
         args = elements[1:]
         
+        if isinstance(func, LambdaNode):
+            func_name = self._gen_lambda(func)
+            args_str = ", ".join(self._gen_expr(a) for a in args)
+            return f"{func_name}({args_str})"
+        
         if isinstance(func, SymbolNode):
             match func.name:
                 case "+":
@@ -125,6 +202,10 @@ class CodeGenerator:
                 case "print":
                     return f"lisp_print({self._gen_expr(args[0])})"
                 case _:
+                    for node in self.functions:
+                        if node.startswith(f"LispValue* {func.name}("):
+                            args_str = ", ".join(self._gen_expr(a) for a in args)
+                            return f"{func.name}({args_str})"
                     return "NULL"
         
         return "NULL"
@@ -157,3 +238,24 @@ class CodeGenerator:
         self.statements.append("}")
         
         return temp
+
+    def _gen_lambda(self, node: LambdaNode) -> str:
+        func_name = f"__lambda_{self.func_counter}"
+        self.func_counter += 1
+        
+        saved_local = self.local_vars.copy()
+        self.local_vars = set(node.params)
+        
+        params_str = ", ".join(["LispValue* " + p for p in node.params])
+        func_lines = [f"LispValue* {func_name}({params_str}) {{"]
+        
+        body_expr = self._gen_expr(node.body)
+        if body_expr:
+            func_lines.append(f"    return {body_expr};")
+        else:
+            func_lines.append("    return NULL;")
+        func_lines.append("}")
+        
+        self.functions.append("\n".join(func_lines))
+        self.local_vars = saved_local
+        return func_name

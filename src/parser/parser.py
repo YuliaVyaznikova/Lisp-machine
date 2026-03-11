@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from .tokenizer import tokenize, Token, TokenType
 from .ast_nodes import *
 
@@ -7,10 +8,69 @@ class ParseError(Exception):
         self.token = token
         super().__init__(message)
 
+class SpecialFormHandler(ABC):
+    @abstractmethod
+    def can_handle(self, name: str) -> bool:
+        pass
+    
+    @abstractmethod
+    def parse(self, elements: list, start: Token) -> ASTNode:
+        pass
+
+class IfHandler(SpecialFormHandler):
+    def can_handle(self, name: str) -> bool:
+        return name == "if"
+    
+    def parse(self, elements: list, start: Token) -> ASTNode:
+        if len(elements) < 3:
+            raise ParseError("if requires condition and then branch", start)
+        condition = elements[1]
+        then_branch = elements[2]
+        else_branch = elements[3] if len(elements) > 3 else NilNode()
+        return IfNode(condition=condition, then_branch=then_branch, else_branch=else_branch)
+
+class DefineHandler(SpecialFormHandler):
+    def can_handle(self, name: str) -> bool:
+        return name == "define"
+    
+    def parse(self, elements: list, start: Token) -> ASTNode:
+        if len(elements) < 3:
+            raise ParseError("define requires name and value", start)
+        
+        second = elements[1]
+        if isinstance(second, SymbolNode):
+            return DefineNode(name=second.name, value=elements[2])
+        
+        if isinstance(second, ListNode):
+            if not second.elements or not isinstance(second.elements[0], SymbolNode):
+                raise ParseError("define function requires name", start)
+            name = second.elements[0].name
+            params = [p.name for p in second.elements[1:] if isinstance(p, SymbolNode)]
+            return DefineNode(name=name, params=params, body=elements[2])
+        
+        raise ParseError("invalid define syntax", start)
+
+class LambdaHandler(SpecialFormHandler):
+    def can_handle(self, name: str) -> bool:
+        return name == "lambda"
+    
+    def parse(self, elements: list, start: Token) -> ASTNode:
+        if len(elements) < 3:
+            raise ParseError("lambda requires params and body", start)
+        
+        params_node = elements[1]
+        if not isinstance(params_node, ListNode):
+            raise ParseError("lambda params must be a list", start)
+        
+        params = [p.name for p in params_node.elements if isinstance(p, SymbolNode)]
+        body = elements[2]
+        return LambdaNode(params=params, body=body)
+
 class Parser:
     def __init__(self, tokens: list):
         self.tokens = tokens
         self.pos = 0
+        self.handlers = [IfHandler(), DefineHandler(), LambdaHandler()]
     
     def current(self) -> Token:
         if self.pos < len(self.tokens):
@@ -85,20 +145,11 @@ class Parser:
         
         if isinstance(elements[0], SymbolNode):
             name = elements[0].name
-            if name == "if":
-                return self._parse_if(elements, start)
+            for handler in self.handlers:
+                if handler.can_handle(name):
+                    return handler.parse(elements, start)
         
         return ListNode(elements=elements)
-    
-    def _parse_if(self, elements: list, start: Token) -> IfNode:
-        if len(elements) < 3:
-            raise ParseError("if requires condition and then branch", start)
-        
-        condition = elements[1]
-        then_branch = elements[2]
-        else_branch = elements[3] if len(elements) > 3 else NilNode()
-        
-        return IfNode(condition=condition, then_branch=then_branch, else_branch=else_branch)
 
 def parse(source: str) -> list:
     tokens = tokenize(source)

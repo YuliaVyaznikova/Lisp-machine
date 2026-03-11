@@ -11,7 +11,8 @@ typedef enum {
     LISP_STRING,
     LISP_SYMBOL,
     LISP_PAIR,
-    LISP_CLOSURE
+    LISP_CLOSURE,
+    LISP_BINDING
 } LispType;
 
 typedef struct LispValue {
@@ -30,6 +31,11 @@ typedef struct LispValue {
             void* func_ptr;
             struct LispValue* env;
         } closure;
+        struct {
+            char* name;
+            struct LispValue* value;
+            struct LispValue* parent;
+        } binding;
     } data;
 } LispValue;
 
@@ -58,6 +64,10 @@ bool lisp_is_true(LispValue* val);
 
 void lisp_retain(LispValue* val);
 void lisp_release(LispValue* val);
+
+LispValue* lisp_make_binding(const char* name, LispValue* value, LispValue* parent);
+LispValue* lisp_env_lookup(LispValue* env, const char* name);
+LispValue* lisp_env_extend(LispValue* env, const char* name, LispValue* value);
 
 void lisp_print(LispValue* val);
 

@@ -154,6 +154,11 @@ void lisp_release(LispValue* val) {
         case LISP_CLOSURE:
             lisp_release(val->data.closure.env);
             break;
+        case LISP_BINDING:
+            free(val->data.binding.name);
+            lisp_release(val->data.binding.value);
+            lisp_release(val->data.binding.parent);
+            break;
         default:
             break;
     }
@@ -213,4 +218,32 @@ static void print_value(LispValue* val) {
 void lisp_print(LispValue* val) {
     print_value(val);
     printf("\n");
+}
+
+LispValue* lisp_make_binding(const char* name, LispValue* value, LispValue* parent) {
+    LispValue* val = alloc_value(LISP_BINDING);
+    val->data.binding.name = strdup(name);
+    val->data.binding.value = value;
+    val->data.binding.parent = parent;
+    if (value) lisp_retain(value);
+    if (parent) lisp_retain(parent);
+    return val;
+}
+
+LispValue* lisp_env_lookup(LispValue* env, const char* name) {
+    while (env) {
+        if (env->type == LISP_BINDING) {
+            if (strcmp(env->data.binding.name, name) == 0) {
+                return env->data.binding.value;
+            }
+            env = env->data.binding.parent;
+        } else {
+            break;
+        }
+    }
+    return NULL;
+}
+
+LispValue* lisp_env_extend(LispValue* env, const char* name, LispValue* value) {
+    return lisp_make_binding(name, value, env);
 }

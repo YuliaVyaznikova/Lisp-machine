@@ -54,3 +54,21 @@ class ApplicationNode(ASTNode):
     def __post_init__(self):
         if self.arguments is None:
             self.arguments = []
+
+@dataclass
+class DefineNode(ASTNode):
+    name: str = ""
+    params: List[str] = None
+    body: ASTNode = None
+    value: ASTNode = None
+    def __post_init__(self):
+        if self.params is None:
+            self.params = []
+
+@dataclass
+class LambdaNode(ASTNode):
+    params: List[str] = None
+    body: ASTNode = None
+    def __post_init__(self):
+        if self.params is None:
+            self.params = []

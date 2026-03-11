@@ -95,4 +95,40 @@ CMD gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     gcc build/quotes.c build/lisp.o -I. -o build/quotes && \
     ./build/quotes 2>&1 | tee -a tests/test_results.txt && \
     echo "" && \
+    echo "--- define-var.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/define-var.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/define-var.lisp -o build/define-var.c && \
+    cat build/define-var.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/define-var.c build/lisp.o -I. -o build/define-var && \
+    ./build/define-var 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
+    echo "--- define-func.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/define-func.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/define-func.lisp -o build/define-func.c && \
+    cat build/define-func.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/define-func.c build/lisp.o -I. -o build/define-func && \
+    ./build/define-func 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
+    echo "--- lambda.lisp ---" && \
+    echo "Lisp source:" && \
+    cat examples/lambda.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py examples/lambda.lisp -o build/lambda.c && \
+    cat build/lambda.c && \
+    echo "" && \
+    echo "Output:" && \
+    gcc build/lambda.c build/lisp.o -I. -o build/lambda && \
+    ./build/lambda 2>&1 | tee -a tests/test_results.txt && \
+    echo "" && \
     echo "=== All tests passed ===" | tee -a tests/test_results.txt
