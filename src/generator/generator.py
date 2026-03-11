@@ -248,6 +248,10 @@ class CodeGenerator:
                     return f"lisp_cons({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
                 case "print":
                     return f"lisp_print({self._gen_expr(args[0])})"
+                case "apply":
+                    func_expr = self._gen_expr(args[0])
+                    args_expr = self._gen_expr(args[1])
+                    return f"lisp_apply({func_expr}, {args_expr})"
                 case _:
                     mangled = self._mangle_name(func.name)
                     for node in self.functions:

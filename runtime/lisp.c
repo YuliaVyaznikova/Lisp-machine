@@ -284,3 +284,55 @@ LispValue* lisp_call_closure(LispValue* closure, LispValue* args) {
     ClosureFunc func = (ClosureFunc)closure->data.closure.func_ptr;
     return func(args, closure->data.closure.env);
 }
+
+LispValue* lisp_apply(LispValue* func, LispValue* args) {
+    if (!func) return NULL;
+    
+    if (func->type == LISP_CLOSURE) {
+        return lisp_call_closure(func, args);
+    }
+    
+    if (func->type == LISP_SYMBOL) {
+        const char* name = func->data.symbol_name;
+        
+        LispValue* a = lisp_list_get(args, 0);
+        LispValue* b = lisp_list_get(args, 1);
+        
+        if (strcmp(name, "+") == 0) {
+            LispValue* result = a;
+            LispValue* curr = args;
+            while (curr && curr->type == LISP_PAIR) {
+                if (curr != args) {
+                    result = lisp_add(result, curr->data.pair.car);
+                }
+                curr = curr->data.pair.cdr;
+            }
+            return result;
+        }
+        if (strcmp(name, "-") == 0) return lisp_sub(a, b);
+        if (strcmp(name, "*") == 0) {
+            LispValue* result = a;
+            LispValue* curr = args;
+            while (curr && curr->type == LISP_PAIR) {
+                if (curr != args) {
+                    result = lisp_mul(result, curr->data.pair.car);
+                }
+                curr = curr->data.pair.cdr;
+            }
+            return result;
+        }
+        if (strcmp(name, "/") == 0) return lisp_div(a, b);
+        if (strcmp(name, "=") == 0) return lisp_eq(a, b);
+        if (strcmp(name, "<") == 0) return lisp_lt(a, b);
+        if (strcmp(name, ">") == 0) return lisp_gt(a, b);
+        if (strcmp(name, "first") == 0) return lisp_first(a);
+        if (strcmp(name, "rest") == 0) return lisp_rest(a);
+        if (strcmp(name, "cons") == 0) return lisp_cons(a, b);
+        if (strcmp(name, "print") == 0) {
+            lisp_print(a);
+            return a;
+        }
+    }
+    
+    return NULL;
+}
