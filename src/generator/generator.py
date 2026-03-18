@@ -260,6 +260,17 @@ class CodeGenerator:
     def _gen_tco_branch(self, node: ASTNode, func_name: str, params: List[str]) -> List[str]:
         stmts = []
         
+        if isinstance(node, IfNode):
+            cond = self._gen_expr(node.condition)
+            stmts.append(f"            if (lisp_is_true({cond})) {{")
+            then_stmts = self._gen_tco_branch(node.then_branch, func_name, params)
+            stmts.extend(then_stmts)
+            stmts.append("            } else {")
+            else_stmts = self._gen_tco_branch(node.else_branch, func_name, params)
+            stmts.extend(else_stmts)
+            stmts.append("            }")
+            return stmts
+        
         if isinstance(node, ListNode) and node.elements:
             first = node.elements[0]
             if isinstance(first, SymbolNode):

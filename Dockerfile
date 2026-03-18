@@ -23,7 +23,7 @@ CMD { \
     echo "=== Python parser tests ===" && \
     python3 -m pytest tests/test_parser.py -v && \
     echo "" && \
-    echo "=== End-to-End tests ===" && \
+    echo "=== End-to-End tests (examples/) ===" && \
     echo "" && \
     echo "--- hello.lisp ---" && \
     echo "Lisp source:" && \
@@ -169,17 +169,27 @@ CMD { \
     gcc build/tco.c build/lisp.o -I. -o build/tco && \
     ./build/tco && \
     echo "" && \
-    echo "--- stdlib.lisp ---" && \
+    echo "--- macros.lisp ---" && \
     echo "Lisp source:" && \
-    cat examples/stdlib.lisp && \
+    cat examples/macros.lisp && \
     echo "" && \
     echo "Generated C:" && \
-    python3 src/main.py examples/stdlib.lisp -o build/stdlib.c && \
-    cat build/stdlib.c && \
+    python3 src/main.py examples/macros.lisp -o build/macros.c && \
+    cat build/macros.c && \
     echo "" && \
     echo "Output:" && \
-    gcc build/stdlib.c build/lisp.o -I. -o build/stdlib && \
-    ./build/stdlib && \
+    gcc build/macros.c build/lisp.o -I. -o build/macros && \
+    ./build/macros && \
+    echo "" && \
+    echo "=== Standard library (lib/) ===" && \
+    echo "" && \
+    echo "--- library.lisp ---" && \
+    echo "Lisp source:" && \
+    cat lib/library.lisp && \
+    echo "" && \
+    echo "Generated C:" && \
+    python3 src/main.py lib/library.lisp -o build/library.c && \
+    cat build/library.c && \
     echo "" && \
     echo "=== All tests passed ==="; \
 } 2>&1 | tee tests/test_results.txt
