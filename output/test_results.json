@@ -1,0 +1,71 @@
+{
+  "results": [
+    {
+      "file": "examples/hello.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/arithmetic.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/comparisons.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/conditionals.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/lists.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/quotes.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/define-var.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/define-func.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/lambda.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/closure.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/apply.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/tco.lisp",
+      "status": "pass",
+      "message": "OK"
+    },
+    {
+      "file": "examples/macros.lisp",
+      "status": "pass",
+      "message": "OK"
+    }
+  ],
+  "passed": 13,
+  "failed": 0
+}

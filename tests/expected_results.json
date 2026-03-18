@@ -1,0 +1,58 @@
+{
+  "tests": [
+    {
+      "file": "examples/hello.lisp",
+      "expected_output": "\"Hello, World!\"\n"
+    },
+    {
+      "file": "examples/arithmetic.lisp",
+      "expected_output": "6\n42\n"
+    },
+    {
+      "file": "examples/comparisons.lisp",
+      "expected_output": "true\ntrue\ntrue\nfalse\n"
+    },
+    {
+      "file": "examples/conditionals.lisp",
+      "expected_output": "1\n1\n\"less\"\n"
+    },
+    {
+      "file": "examples/lists.lisp",
+      "expected_output": "(1 2 3)\n1\n(2)\n"
+    },
+    {
+      "file": "examples/quotes.lisp",
+      "expected_output": "foo\n(1 2 3)\nnil\n"
+    },
+    {
+      "file": "examples/define-var.lisp",
+      "expected_output": "42\n"
+    },
+    {
+      "file": "examples/define-func.lisp",
+      "expected_output": "25\n100\n"
+    },
+    {
+      "file": "examples/lambda.lisp",
+      "expected_output": "25\n10\n"
+    },
+    {
+      "file": "examples/closure.lisp",
+      "expected_output": "15\n"
+    },
+    {
+      "file": "examples/apply.lisp",
+      "expected_output": "3\n6\n",
+      "known_issue": "apply only uses first 2 args for variadic functions"
+    },
+    {
+      "file": "examples/tco.lisp",
+      "expected_output": "120\n3628800\n5050\n55\n6765\n"
+    },
+    {
+      "file": "examples/macros.lisp",
+      "expected_output": "\"=== when macro ===\"\nnil\nnil\n\"=== unless macro ===\"\nnil\nnil\n\"=== let macro ===\"\nnil\nnil\n\"=== swap macro ===\"\nnil\n\"=== inc macro ===\"\nnil\nnil\n\"=== dec macro ===\"\nnil\nnil\n\"=== assert macro ===\"\n",
+      "known_issue": "quasiquote/unquote not fully implemented"
+    }
+  ]
+}
