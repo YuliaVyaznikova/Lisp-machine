@@ -66,28 +66,6 @@ class LambdaHandler(SpecialFormHandler):
         body = elements[2]
         return LambdaNode(params=params, body=body)
 
-class WhileHandler(SpecialFormHandler):
-    def can_handle(self, name: str) -> bool:
-        return name == "while"
-    
-    def parse(self, elements: list, start: Token) -> ASTNode:
-        if len(elements) < 3:
-            raise ParseError("while requires condition and body", start)
-        condition = elements[1]
-        body = elements[2:]
-        return WhileNode(condition=condition, body=body)
-
-class SetHandler(SpecialFormHandler):
-    def can_handle(self, name: str) -> bool:
-        return name == "set!"
-    
-    def parse(self, elements: list, start: Token) -> ASTNode:
-        if len(elements) != 3:
-            raise ParseError("set! requires name and value", start)
-        if not isinstance(elements[1], SymbolNode):
-            raise ParseError("set! requires a symbol", start)
-        return SetNode(name=elements[1].name, value=elements[2])
-
 class DefmacroHandler(SpecialFormHandler):
     def can_handle(self, name: str) -> bool:
         return name == "defmacro"
@@ -113,7 +91,7 @@ class Parser:
     def __init__(self, tokens: list):
         self.tokens = tokens
         self.pos = 0
-        self.handlers = [IfHandler(), DefineHandler(), LambdaHandler(), WhileHandler(), SetHandler(), DefmacroHandler()]
+        self.handlers = [IfHandler(), DefineHandler(), LambdaHandler(), DefmacroHandler()]
     
     def current(self) -> Token:
         if self.pos < len(self.tokens):

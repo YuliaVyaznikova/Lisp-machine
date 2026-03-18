@@ -39,7 +39,7 @@ tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 89%]
 tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 94%]
 tests/test_parser.py::TestExamples::test_quotes_example PASSED           [100%]
 
-============================== 19 passed in 0.16s ==============================
+============================== 19 passed in 0.14s ==============================
 
 === End-to-End tests ===
 
@@ -356,38 +356,169 @@ Output:
 3
 6
 
---- while.lisp ---
+--- tco.lisp (Tail Call Optimization) ---
 Lisp source:
-(define n 5)
-(define sum 0)
-(while (> n 0)
-  (set! sum (+ sum n))
-  (set! n (- n 1)))
-(print sum)
+; Tail Call Optimization examples
+
+; Factorial with accumulator (tail-recursive)
+(define (factorial-acc n acc)
+  (if (= n 0)
+      acc
+      (factorial-acc (- n 1) (* n acc))))
+
+(define (factorial n)
+  (factorial-acc n 1))
+
+(print (factorial 5))
+(print (factorial 10))
+
+; Sum from 1 to n (tail-recursive)
+(define (sum-to-acc n acc)
+  (if (= n 0)
+      acc
+      (sum-to-acc (- n 1) (+ n acc))))
+
+(define (sum-to n)
+  (sum-to-acc n 0))
+
+(print (sum-to 100))
+
+; Fibonacci (tail-recursive)
+(define (fib-acc n a b)
+  (if (= n 0)
+      a
+      (fib-acc (- n 1) b (+ a b))))
+
+(define (fib n)
+  (fib-acc n 0 1))
+
+(print (fib 10))
+(print (fib 20))
+
 Generated C:
 #include <stdio.h>
 #include <stdlib.h>
 #include "runtime/lisp.h"
 
 /* Forward declarations */
+LispValue* factorial_acc(LispValue* n, LispValue* acc);
+LispValue* factorial(LispValue* n);
+LispValue* sum_to_acc(LispValue* n, LispValue* acc);
+LispValue* sum_to(LispValue* n);
+LispValue* fib_acc(LispValue* n, LispValue* a, LispValue* b);
+LispValue* fib(LispValue* n);
 
+LispValue* factorial_acc(LispValue* n, LispValue* acc) {
+    LispValue* __new_n = NULL;
+    LispValue* __new_acc = NULL;
+    while (1) {
+        if (lisp_is_true(lisp_eq(n, lisp_make_int(0)))) {
+            return acc;
+        } else {
+            __new_n = lisp_sub(n, lisp_make_int(1));
+            __new_acc = lisp_mul(n, acc);
+            n = __new_n;
+            acc = __new_acc;
+            continue;
+        }
+    }
+}
 
+LispValue* factorial_acc_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* n = lisp_list_get(__args, 0);
+    LispValue* acc = lisp_list_get(__args, 1);
+    return factorial_acc(n, acc);
+}
+
+LispValue* factorial(LispValue* n) {
+    return factorial_acc(n, lisp_make_int(1));
+}
+
+LispValue* factorial_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* n = lisp_list_get(__args, 0);
+    return factorial(n);
+}
+
+LispValue* sum_to_acc(LispValue* n, LispValue* acc) {
+    LispValue* __new_n = NULL;
+    LispValue* __new_acc = NULL;
+    while (1) {
+        if (lisp_is_true(lisp_eq(n, lisp_make_int(0)))) {
+            return acc;
+        } else {
+            __new_n = lisp_sub(n, lisp_make_int(1));
+            __new_acc = lisp_add(n, acc);
+            n = __new_n;
+            acc = __new_acc;
+            continue;
+        }
+    }
+}
+
+LispValue* sum_to_acc_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* n = lisp_list_get(__args, 0);
+    LispValue* acc = lisp_list_get(__args, 1);
+    return sum_to_acc(n, acc);
+}
+
+LispValue* sum_to(LispValue* n) {
+    return sum_to_acc(n, lisp_make_int(0));
+}
+
+LispValue* sum_to_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* n = lisp_list_get(__args, 0);
+    return sum_to(n);
+}
+
+LispValue* fib_acc(LispValue* n, LispValue* a, LispValue* b) {
+    LispValue* __new_n = NULL;
+    LispValue* __new_a = NULL;
+    LispValue* __new_b = NULL;
+    while (1) {
+        if (lisp_is_true(lisp_eq(n, lisp_make_int(0)))) {
+            return a;
+        } else {
+            __new_n = lisp_sub(n, lisp_make_int(1));
+            __new_a = b;
+            __new_b = lisp_add(a, b);
+            n = __new_n;
+            a = __new_a;
+            b = __new_b;
+            continue;
+        }
+    }
+}
+
+LispValue* fib_acc_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* n = lisp_list_get(__args, 0);
+    LispValue* a = lisp_list_get(__args, 1);
+    LispValue* b = lisp_list_get(__args, 2);
+    return fib_acc(n, a, b);
+}
+
+LispValue* fib(LispValue* n) {
+    return fib_acc(n, lisp_make_int(0), lisp_make_int(1));
+}
+
+LispValue* fib_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* n = lisp_list_get(__args, 0);
+    return fib(n);
+}
 
 int main(int argc, char** argv) {
-    LispValue* n = NULL;
-    LispValue* sum = NULL;
-    n = lisp_make_int(5);
-    sum = lisp_make_int(0);
-    LispValue* __while_result_0 = NULL;
-    while (lisp_is_true(lisp_gt(n, lisp_make_int(0)))) {
-        sum = lisp_add(sum, n);
-        n = lisp_sub(n, lisp_make_int(1));
-    }
-    lisp_print(sum);
+    lisp_print(factorial(lisp_make_int(5)));
+    lisp_print(factorial(lisp_make_int(10)));
+    lisp_print(sum_to(lisp_make_int(100)));
+    lisp_print(fib(lisp_make_int(10)));
+    lisp_print(fib(lisp_make_int(20)));
     return 0;
 }
 Output:
-15
+120
+3628800
+5050
+55
+6765
 
 --- stdlib.lisp ---
 Lisp source:
@@ -487,13 +618,22 @@ LispValue* filter_wrapper(LispValue* __args, LispValue* __env) {
 }
 
 LispValue* reduce(LispValue* f, LispValue* init, LispValue* lst) {
-    LispValue* __result_0 = NULL;
-    if (lisp_is_true(lisp_is_nil_fn(lst))) {
-        __result_0 = init;
-    } else {
-        __result_0 = reduce(f, lisp_call_closure(f, lisp_cons(init, lisp_cons(lisp_first(lst), NULL))), lisp_rest(lst));
+    LispValue* __new_f = NULL;
+    LispValue* __new_init = NULL;
+    LispValue* __new_lst = NULL;
+    while (1) {
+        if (lisp_is_true(lisp_is_nil_fn(lst))) {
+            return init;
+        } else {
+            __new_f = f;
+            __new_init = lisp_call_closure(f, lisp_cons(init, lisp_cons(lisp_first(lst), NULL)));
+            __new_lst = lisp_rest(lst);
+            f = __new_f;
+            init = __new_init;
+            lst = __new_lst;
+            continue;
+        }
     }
-    return __result_0;
 }
 
 LispValue* reduce_wrapper(LispValue* __args, LispValue* __env) {

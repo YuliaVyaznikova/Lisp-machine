@@ -39,15 +39,6 @@ class MacroExpander:
         if isinstance(node, LambdaNode):
             return LambdaNode(params=node.params, body=self.expand(node.body))
         
-        if isinstance(node, WhileNode):
-            return WhileNode(
-                condition=self.expand(node.condition),
-                body=[self.expand(b) for b in node.body]
-            )
-        
-        if isinstance(node, SetNode):
-            return SetNode(name=node.name, value=self.expand(node.value))
-        
         if isinstance(node, QuoteNode):
             return node
         

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Tuple
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,6 +17,7 @@ class CodeGenerator:
         self.func_counter = 0
         self.local_vars = set()
         self.closures = []
+        self.current_function = None
         self.builtin_wrappers = {
             '+': 'lisp_add_wrapper',
             '-': 'lisp_sub_wrapper',
@@ -30,6 +31,68 @@ class CodeGenerator:
             'cons': 'lisp_cons_wrapper',
             'print': 'lisp_print_wrapper',
         }
+    
+    def _is_tail_call(self, node: ASTNode, func_name: str) -> bool:
+        if isinstance(node, ListNode) and node.elements:
+            first = node.elements[0]
+            if isinstance(first, SymbolNode):
+                mangled = self._mangle_name(first.name)
+                if mangled == func_name:
+                    return True
+        return False
+    
+    def _find_tail_calls(self, node: ASTNode, func_name: str) -> List[Tuple[ASTNode, bool]]:
+        calls = []
+        self._find_tail_calls_recursive(node, func_name, True, calls)
+        return calls
+    
+    def _find_tail_calls_recursive(self, node: ASTNode, func_name: str, is_tail: bool, calls: List):
+        if isinstance(node, ListNode) and node.elements:
+            first = node.elements[0]
+            if isinstance(first, SymbolNode):
+                mangled = self._mangle_name(first.name)
+                if mangled == func_name:
+                    calls.append((node, is_tail))
+                    return
+            
+            if isinstance(first, SymbolNode) and first.name == "if":
+                if len(node.elements) >= 3:
+                    self._find_tail_calls_recursive(node.elements[1], func_name, False, calls)
+                    self._find_tail_calls_recursive(node.elements[2], func_name, is_tail, calls)
+                    if len(node.elements) > 3:
+                        self._find_tail_calls_recursive(node.elements[3], func_name, is_tail, calls)
+                return
+            
+            for elem in node.elements[1:]:
+                self._find_tail_calls_recursive(elem, func_name, False, calls)
+        
+        if isinstance(node, IfNode):
+            self._find_tail_calls_recursive(node.condition, func_name, False, calls)
+            self._find_tail_calls_recursive(node.then_branch, func_name, is_tail, calls)
+            self._find_tail_calls_recursive(node.else_branch, func_name, is_tail, calls)
+    
+    def _can_optimize_tail_recursion(self, node: DefineNode) -> bool:
+        if not node.params:
+            return False
+        
+        mangled = self._mangle_name(node.name)
+        calls = self._find_tail_calls(node.body, mangled)
+        
+        for call_node, is_tail in calls:
+            if not is_tail:
+                return False
+        
+        return len(calls) > 0
+    
+    def _get_recursive_call_args(self, node: ListNode, func_name: str) -> Optional[List[ASTNode]]:
+        if not node.elements:
+            return None
+        first = node.elements[0]
+        if isinstance(first, SymbolNode):
+            mangled = self._mangle_name(first.name)
+            if mangled == func_name:
+                return node.elements[1:]
+        return None
     
     def _find_free_vars(self, node: ASTNode, bound: set) -> set:
         if isinstance(node, IntNode) or isinstance(node, FloatNode) or isinstance(node, StringNode) or isinstance(node, NilNode):
@@ -125,19 +188,24 @@ class CodeGenerator:
         self.func_names.add(mangled)
         self.temp_counter = 0
         self.local_vars = set(node.params)
+        self.current_function = mangled
         self.statements = []
         func_stmts = []
         
         params_str = ", ".join(["LispValue* " + p for p in node.params])
         func_stmts.append(f"LispValue* {mangled}({params_str}) {{")
         
-        body_expr = self._gen_expr(node.body)
-        for stmt in self.statements:
-            func_stmts.append(f"    {stmt}")
-        if body_expr:
-            func_stmts.append(f"    return {body_expr};")
+        if self._can_optimize_tail_recursion(node):
+            func_stmts.extend(self._gen_function_tco(node, mangled))
         else:
-            func_stmts.append("    return NULL;")
+            body_expr = self._gen_expr(node.body)
+            for stmt in self.statements:
+                func_stmts.append(f"    {stmt}")
+            if body_expr:
+                func_stmts.append(f"    return {body_expr};")
+            else:
+                func_stmts.append("    return NULL;")
+        
         func_stmts.append("}")
         
         wrapper_stmts = [f"LispValue* {mangled}_wrapper(LispValue* __args, LispValue* __env) {{"]
@@ -150,6 +218,69 @@ class CodeGenerator:
         self.functions.append("\n".join(func_stmts))
         self.functions.append("\n".join(wrapper_stmts))
         self.local_vars = set()
+        self.current_function = None
+    
+    def _gen_function_tco(self, node: DefineNode, func_name: str) -> List[str]:
+        stmts = []
+        
+        for p in node.params:
+            stmts.append(f"    LispValue* __new_{p} = NULL;")
+        
+        stmts.append("    while (1) {")
+        
+        body_stmts = self._gen_tco_body(node.body, func_name, node.params)
+        stmts.extend(body_stmts)
+        
+        stmts.append("    }")
+        
+        return stmts
+    
+    def _gen_tco_body(self, node: ASTNode, func_name: str, params: List[str]) -> List[str]:
+        stmts = []
+        
+        if isinstance(node, IfNode):
+            cond = self._gen_expr(node.condition)
+            stmts.append(f"        if (lisp_is_true({cond})) {{")
+            
+            then_stmts = self._gen_tco_branch(node.then_branch, func_name, params)
+            stmts.extend(then_stmts)
+            
+            stmts.append("        } else {")
+            
+            else_stmts = self._gen_tco_branch(node.else_branch, func_name, params)
+            stmts.extend(else_stmts)
+            
+            stmts.append("        }")
+        else:
+            expr = self._gen_expr(node)
+            stmts.append(f"        return {expr};")
+        
+        return stmts
+    
+    def _gen_tco_branch(self, node: ASTNode, func_name: str, params: List[str]) -> List[str]:
+        stmts = []
+        
+        if isinstance(node, ListNode) and node.elements:
+            first = node.elements[0]
+            if isinstance(first, SymbolNode):
+                mangled = self._mangle_name(first.name)
+                if mangled == func_name:
+                    args = node.elements[1:]
+                    for i, p in enumerate(params):
+                        if i < len(args):
+                            stmts.append(f"            __new_{p} = {self._gen_expr(args[i])};")
+                        else:
+                            stmts.append(f"            __new_{p} = NULL;")
+                    
+                    for p in params:
+                        stmts.append(f"            {p} = __new_{p};")
+                    
+                    stmts.append("            continue;")
+                    return stmts
+        
+        expr = self._gen_expr(node)
+        stmts.append(f"            return {expr};")
+        return stmts
     
     def _main(self, nodes: List[ASTNode]) -> str:
         lines = ["int main(int argc, char** argv) {"]
@@ -215,12 +346,6 @@ class CodeGenerator:
         
         if isinstance(node, LambdaNode):
             return self._gen_lambda(node)
-        
-        if isinstance(node, WhileNode):
-            return self._gen_while(node)
-        
-        if isinstance(node, SetNode):
-            return self._gen_set(node)
         
         return "NULL"
     
@@ -400,24 +525,3 @@ class CodeGenerator:
         for fv in sorted(free_vars):
             env_build = f'lisp_env_extend({env_build}, "{fv}", {fv})'
         return f"lisp_make_closure({func_name}, {env_build})"
-    
-    def _gen_while(self, node: WhileNode) -> str:
-        temp = f"__while_result_{self.temp_counter}"
-        self.temp_counter += 1
-        
-        self.statements.append(f"LispValue* {temp} = NULL;")
-        self.statements.append(f"while (lisp_is_true({self._gen_expr(node.condition)})) {{")
-        
-        for body_node in node.body:
-            body_expr = self._gen_expr(body_node)
-            if body_expr:
-                self.statements.append(f"    {body_expr};")
-        
-        self.statements.append("}")
-        
-        return temp
-    
-    def _gen_set(self, node: SetNode) -> str:
-        value_expr = self._gen_expr(node.value)
-        var_name = self._mangle_name(node.name)
-        return f"{var_name} = {value_expr}"

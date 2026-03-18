@@ -157,17 +157,17 @@ CMD { \
     gcc build/apply.c build/lisp.o -I. -o build/apply && \
     ./build/apply && \
     echo "" && \
-    echo "--- while.lisp ---" && \
+    echo "--- tco.lisp (Tail Call Optimization) ---" && \
     echo "Lisp source:" && \
-    cat examples/while.lisp && \
+    cat examples/tco.lisp && \
     echo "" && \
     echo "Generated C:" && \
-    python3 src/main.py examples/while.lisp -o build/while.c && \
-    cat build/while.c && \
+    python3 src/main.py examples/tco.lisp -o build/tco.c && \
+    cat build/tco.c && \
     echo "" && \
     echo "Output:" && \
-    gcc build/while.c build/lisp.o -I. -o build/while && \
-    ./build/while && \
+    gcc build/tco.c build/lisp.o -I. -o build/tco && \
+    ./build/tco && \
     echo "" && \
     echo "--- stdlib.lisp ---" && \
     echo "Lisp source:" && \
