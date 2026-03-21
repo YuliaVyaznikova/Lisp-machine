@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "runtime/lisp.h"
 
+/* GC initialization is done in main() */
+
 /* Forward declarations */
 LispValue* zero_p(LispValue* x);
 LispValue* positive_p(LispValue* x);
@@ -413,5 +415,10 @@ LispValue* curry_wrapper(LispValue* __args, LispValue* __env) {
 }
 
 int main(int argc, char** argv) {
+    gc_init();
+
+
+    /* Cleanup: release all variables */
+    gc_shutdown();
     return 0;
 }

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "runtime/lisp.h"
 
+/* GC initialization is done in main() */
+
 /* Forward declarations */
 
 LispValue* __lambda_0(LispValue* __args, LispValue* __env) {
@@ -16,7 +18,12 @@ LispValue* __lambda_1(LispValue* __args, LispValue* __env) {
 }
 
 int main(int argc, char** argv) {
+    gc_init();
+
     lisp_print(lisp_call_closure(lisp_make_closure(__lambda_0, NULL), lisp_cons(lisp_make_int(5), NULL)));
     lisp_print(lisp_call_closure(lisp_make_closure(__lambda_1, NULL), lisp_cons(lisp_make_int(3), lisp_cons(lisp_make_int(7), NULL))));
+
+    /* Cleanup: release all variables */
+    gc_shutdown();
     return 0;
 }

@@ -2,11 +2,15 @@
 #include <stdlib.h>
 #include "runtime/lisp.h"
 
+/* GC initialization is done in main() */
+
 /* Forward declarations */
 
 
 
 int main(int argc, char** argv) {
+    gc_init();
+
     lisp_print(lisp_make_string("=== when macro ==="));
     lisp_print(NULL);
     lisp_print(NULL);
@@ -25,5 +29,8 @@ int main(int argc, char** argv) {
     lisp_print(NULL);
     lisp_print(NULL);
     lisp_print(lisp_make_string("=== assert macro ==="));
+
+    /* Cleanup: release all variables */
+    gc_shutdown();
     return 0;
 }

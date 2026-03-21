@@ -4,11 +4,190 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdbool.h>
+
+#define GC_MAX_OBJECTS 100000
+#define GC_DEBUG 0
+
+typedef struct {
+    LispValue* objects[GC_MAX_OBJECTS];
+    size_t count;
+    pthread_mutex_t lock;
+    pthread_t thread;
+    int running;
+    size_t total_allocated;
+    size_t total_freed;
+} GCGlobals;
+
+static GCGlobals gc = {0};
+
+void gc_add_object(LispValue* val) {
+    if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
+    pthread_mutex_lock(&gc.lock);
+    if (gc.count < GC_MAX_OBJECTS) {
+        gc.objects[gc.count++] = val;
+        gc.total_allocated++;
+#if GC_DEBUG
+        printf("[GC] +ALLOC  ptr=%p type=%d refcount=%u total=%zu\n", 
+               (void*)val, val->type, val->refcount, gc.count);
+#endif
+    }
+    pthread_mutex_unlock(&gc.lock);
+}
+
+void gc_remove_object(LispValue* val) {
+    if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
+    pthread_mutex_lock(&gc.lock);
+    for (size_t i = 0; i < gc.count; i++) {
+        if (gc.objects[i] == val) {
+            gc.objects[i] = gc.objects[--gc.count];
+            gc.total_freed++;
+#if GC_DEBUG
+            printf("[GC] -REMOVE ptr=%p type=%d remaining=%zu\n", 
+                   (void*)val, val->type, gc.count);
+#endif
+            break;
+        }
+    }
+    pthread_mutex_unlock(&gc.lock);
+}
+
+static void gc_mark(LispValue* val, int* marked) {
+    if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
+    if (val->refcount > 0x80000000) return;
+    
+    val->refcount |= 0x80000000;
+    (*marked)++;
+    
+    switch (val->type) {
+        case LISP_PAIR:
+            gc_mark(val->data.pair.car, marked);
+            gc_mark(val->data.pair.cdr, marked);
+            break;
+        case LISP_CLOSURE:
+            gc_mark(val->data.closure.env, marked);
+            break;
+        case LISP_BINDING:
+            gc_mark(val->data.binding.value, marked);
+            gc_mark(val->data.binding.parent, marked);
+            break;
+        default:
+            break;
+    }
+}
+
+static void gc_sweep(void) {
+    pthread_mutex_lock(&gc.lock);
+    for (size_t i = 0; i < gc.count; ) {
+        LispValue* val = gc.objects[i];
+        
+        if (val->refcount & 0x80000000) {
+            val->refcount &= 0x7FFFFFFF;
+            i++;
+        } else {
+            gc.objects[i] = gc.objects[--gc.count];
+            gc.total_freed++;
+            
+            switch (val->type) {
+                case LISP_STRING:
+                    free(val->data.string_val);
+                    break;
+                case LISP_SYMBOL:
+                    free(val->data.symbol_name);
+                    break;
+                case LISP_BINDING:
+                    free(val->data.binding.name);
+                    break;
+                default:
+                    break;
+            }
+            free(val);
+        }
+    }
+    pthread_mutex_unlock(&gc.lock);
+}
+
+void gc_collect_cycles(void) {
+    pthread_mutex_lock(&gc.lock);
+    for (size_t i = 0; i < gc.count; i++) {
+        gc.objects[i]->refcount &= 0x7FFFFFFF;
+    }
+    pthread_mutex_unlock(&gc.lock);
+    
+    int marked = 0;
+    pthread_mutex_lock(&gc.lock);
+    for (size_t i = 0; i < gc.count; i++) {
+        LispValue* val = gc.objects[i];
+        if ((val->refcount & 0x7FFFFFFF) > 0) {
+            val->refcount &= 0x7FFFFFFF;
+            gc_mark(val, &marked);
+        }
+    }
+    pthread_mutex_unlock(&gc.lock);
+    
+    gc_sweep();
+}
+
+static void* gc_thread_func(void* arg) {
+    (void)arg;
+    while (gc.running) {
+        sleep(5);
+        if (gc.running) {
+            gc_collect_cycles();
+        }
+    }
+    return NULL;
+}
+
+void gc_init(void) {
+    gc.count = 0;
+    gc.running = 1;
+    gc.total_allocated = 0;
+    gc.total_freed = 0;
+    pthread_mutex_init(&gc.lock, NULL);
+    pthread_create(&gc.thread, NULL, gc_thread_func, NULL);
+}
+
+void gc_shutdown(void) {
+    gc.running = 0;
+    pthread_join(gc.thread, NULL);
+    pthread_mutex_destroy(&gc.lock);
+    
+    for (size_t i = 0; i < gc.count; i++) {
+        LispValue* val = gc.objects[i];
+        switch (val->type) {
+            case LISP_STRING:
+                free(val->data.string_val);
+                break;
+            case LISP_SYMBOL:
+                free(val->data.symbol_name);
+                break;
+            case LISP_BINDING:
+                free(val->data.binding.name);
+                break;
+            default:
+                break;
+        }
+        free(val);
+    }
+}
+
+void gc_print_stats(void) {
+    printf("GC Stats: allocated=%zu, freed=%zu, alive=%zu\n",
+           gc.total_allocated, gc.total_freed, gc.count);
+}
+
+size_t gc_get_allocated(void) { return gc.total_allocated; }
+size_t gc_get_freed(void) { return gc.total_freed; }
+size_t gc_get_alive(void) { return gc.count; }
 
 static LispValue* alloc_value(LispType type) {
     LispValue* val = (LispValue*)malloc(sizeof(LispValue));
     val->type = type;
     val->refcount = 1;
+    gc_add_object(val);
     return val;
 }
 
@@ -210,6 +389,8 @@ void lisp_retain(LispValue* val) {
 void lisp_release(LispValue* val) {
     if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
     if (--val->refcount > 0) return;
+    
+    gc_remove_object(val);
     
     switch (val->type) {
         case LISP_STRING:

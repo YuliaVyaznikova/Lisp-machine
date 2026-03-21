@@ -20,6 +20,10 @@ CMD { \
     gcc -Wall tests/test_runtime.c build/lisp.o -I. -o build/test_runtime && \
     ./build/test_runtime && \
     echo "" && \
+    echo "=== GC Tests ===" && \
+    gcc -Wall -pthread tests/test_gc.c build/lisp.o -I. -o build/test_gc && \
+    ./build/test_gc && \
+    echo "" && \
     echo "=== Python parser tests ===" && \
     python3 -m pytest tests/test_parser.py -v && \
     echo "" && \

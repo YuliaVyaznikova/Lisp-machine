@@ -155,7 +155,9 @@ class CodeGenerator:
     def _header(self) -> str:
         return '''#include <stdio.h>
 #include <stdlib.h>
-#include "runtime/lisp.h"'''
+#include "runtime/lisp.h"
+
+/* GC initialization is done in main() */'''
     
     def _mangle_name(self, name: str) -> str:
         return name.replace('-', '_').replace('?', '_p')
@@ -295,14 +297,21 @@ class CodeGenerator:
     
     def _main(self, nodes: List[ASTNode]) -> str:
         lines = ["int main(int argc, char** argv) {"]
+        lines.append("    gc_init();")
+        lines.append("")
+        
+        all_vars = []
         
         for name in self.variables:
-            lines.append(f"    LispValue* {self._mangle_name(name)} = NULL;")
+            var_name = self._mangle_name(name)
+            lines.append(f"    LispValue* {var_name} = NULL;")
+            all_vars.append(var_name)
         
         for node in nodes:
             if isinstance(node, DefineNode) and not node.params:
                 expr = self._gen_expr(node.value)
-                lines.append(f"    {self._mangle_name(node.name)} = {expr};")
+                var_name = self._mangle_name(node.name)
+                lines.append(f"    {var_name} = {expr};")
             elif not isinstance(node, DefineNode):
                 self.statements = []
                 result = self._gen_expr(node)
@@ -313,6 +322,12 @@ class CodeGenerator:
                 elif result and result != "NULL":
                     lines.append(f"    {result};")
         
+        lines.append("")
+        lines.append("    /* Cleanup: release all variables */")
+        for var in reversed(all_vars):
+            lines.append(f"    lisp_release({var});")
+        
+        lines.append("    gc_shutdown();")
         lines.append("    return 0;")
         lines.append("}")
         

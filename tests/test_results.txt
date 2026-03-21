@@ -12,34 +12,92 @@ Lists: OK
 
 === All tests passed ===
 
+=== GC Tests ===
+=== GC Tests ===
+
+GC Stats: allocated=0, freed=0, alive=0
+
+--- Test 1: Basic allocation ---
+Created 3 integers: a=0x261823d0, b=0x26182400, c=0x26182430
+GC Stats: allocated=3, freed=0, alive=3
+PASS: All objects tracked, refcounts correct
+
+--- Test 2: Release objects ---
+Released all 3 integers
+GC Stats: allocated=3, freed=3, alive=0
+PASS: Objects freed (freed count should be 3)
+
+--- Test 3: Cons pair ---
+Created x=0x26182430 (refcount=1), y=0x26182400 (refcount=1)
+Created pair=0x261823d0
+After cons: x refcount=2, y refcount=2 (should be 2 each)
+GC Stats: allocated=6, freed=3, alive=3
+Released pair
+After release: x refcount=1, y refcount=1 (should be 1 each)
+Released x and y
+GC Stats: allocated=6, freed=6, alive=0
+PASS: Cons retain/release works correctly
+
+--- Test 4: Small list ---
+Created list (1 2 3) with explicit refs
+  i1 refcount=2, i2 refcount=2, i3 refcount=2
+GC Stats: allocated=12, freed=6, alive=6
+Released all list components
+GC Stats: allocated=12, freed=12, alive=0
+PASS: List freed correctly
+
+--- Test 5: Closure ---
+Created env with x=42, val42 refcount=2
+Created closure with env
+GC Stats: allocated=15, freed=12, alive=3
+Released closure, env, and val42
+GC Stats: allocated=15, freed=15, alive=0
+PASS: Closure freed correctly
+
+--- Test 6: Cycle collection ---
+Cycle collection completed
+GC Stats: allocated=15, freed=15, alive=0
+PASS: No crash during cycle collection
+
+--- Final leak check ---
+Allocated: 15
+Freed:     15
+Alive:     0 (should be 0)
+
+=== All GC tests passed ===
+
 === Python parser tests ===
 ============================= test session starts ==============================
 platform linux -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
 cachedir: .pytest_cache
 rootdir: /app
-collecting ... collected 19 items
+collecting ... collected 23 items
 
-tests/test_parser.py::TestTokenizer::test_tokenize_numbers PASSED        [  5%]
-tests/test_parser.py::TestTokenizer::test_tokenize_symbols PASSED        [ 10%]
-tests/test_parser.py::TestTokenizer::test_tokenize_strings PASSED        [ 15%]
-tests/test_parser.py::TestTokenizer::test_tokenize_parens PASSED         [ 21%]
-tests/test_parser.py::TestParser::test_parse_int PASSED                  [ 26%]
-tests/test_parser.py::TestParser::test_parse_symbol PASSED               [ 31%]
-tests/test_parser.py::TestParser::test_parse_list PASSED                 [ 36%]
-tests/test_parser.py::TestParser::test_parse_if PASSED                   [ 42%]
-tests/test_parser.py::TestParser::test_parse_nil PASSED                  [ 47%]
-tests/test_parser.py::TestParser::test_parse_quote PASSED                [ 52%]
-tests/test_parser.py::TestGenerator::test_generate_int PASSED            [ 57%]
-tests/test_parser.py::TestGenerator::test_generate_arithmetic PASSED     [ 63%]
-tests/test_parser.py::TestGenerator::test_generate_if PASSED             [ 68%]
-tests/test_parser.py::TestExamples::test_hello_example PASSED            [ 73%]
-tests/test_parser.py::TestExamples::test_arithmetic_example PASSED       [ 78%]
-tests/test_parser.py::TestExamples::test_comparisons_example PASSED      [ 84%]
-tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 89%]
-tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 94%]
+tests/test_parser.py::TestTokenizer::test_tokenize_numbers PASSED        [  4%]
+tests/test_parser.py::TestTokenizer::test_tokenize_symbols PASSED        [  8%]
+tests/test_parser.py::TestTokenizer::test_tokenize_strings PASSED        [ 13%]
+tests/test_parser.py::TestTokenizer::test_tokenize_parens PASSED         [ 17%]
+tests/test_parser.py::TestTokenizer::test_tokenize_negative_numbers PASSED [ 21%]
+tests/test_parser.py::TestTokenizer::test_tokenize_escape_sequences PASSED [ 26%]
+tests/test_parser.py::TestTokenizer::test_tokenize_unquote_comma PASSED  [ 30%]
+tests/test_parser.py::TestTokenizer::test_tokenize_unquote_tilde PASSED  [ 34%]
+tests/test_parser.py::TestParser::test_parse_int PASSED                  [ 39%]
+tests/test_parser.py::TestParser::test_parse_symbol PASSED               [ 43%]
+tests/test_parser.py::TestParser::test_parse_list PASSED                 [ 47%]
+tests/test_parser.py::TestParser::test_parse_if PASSED                   [ 52%]
+tests/test_parser.py::TestParser::test_parse_nil PASSED                  [ 56%]
+tests/test_parser.py::TestParser::test_parse_quote PASSED                [ 60%]
+tests/test_parser.py::TestGenerator::test_generate_int PASSED            [ 65%]
+tests/test_parser.py::TestGenerator::test_generate_arithmetic PASSED     [ 69%]
+tests/test_parser.py::TestGenerator::test_generate_if PASSED             [ 73%]
+tests/test_parser.py::TestExamples::test_hello_example PASSED            [ 78%]
+tests/test_parser.py::TestExamples::test_arithmetic_example PASSED       [ 82%]
+tests/test_parser.py::TestExamples::test_comparisons_example PASSED      [ 86%]
+tests/test_parser.py::TestExamples::test_conditionals_example PASSED     [ 91%]
+tests/test_parser.py::TestExamples::test_lists_example PASSED            [ 95%]
 tests/test_parser.py::TestExamples::test_quotes_example PASSED           [100%]
 
-============================== 19 passed in 0.14s ==============================
+============================== 23 passed in 0.18s ==============================
 
 === End-to-End tests ===
   PASS: examples/hello.lisp
@@ -182,6 +240,8 @@ Generated C:
 #include <stdio.h>
 #include <stdlib.h>
 #include "runtime/lisp.h"
+
+/* GC initialization is done in main() */
 
 /* Forward declarations */
 LispValue* zero_p(LispValue* x);
@@ -594,6 +654,11 @@ LispValue* curry_wrapper(LispValue* __args, LispValue* __env) {
 }
 
 int main(int argc, char** argv) {
+    gc_init();
+
+
+    /* Cleanup: release all variables */
+    gc_shutdown();
     return 0;
 }
 === All tests passed ===

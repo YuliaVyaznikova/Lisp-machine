@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "runtime/lisp.h"
 
+/* GC initialization is done in main() */
+
 /* Forward declarations */
 LispValue* factorial_acc(LispValue* n, LispValue* acc);
 LispValue* factorial(LispValue* n);
@@ -108,10 +110,15 @@ LispValue* fib_wrapper(LispValue* __args, LispValue* __env) {
 }
 
 int main(int argc, char** argv) {
+    gc_init();
+
     lisp_print(factorial(lisp_make_int(5)));
     lisp_print(factorial(lisp_make_int(10)));
     lisp_print(sum_to(lisp_make_int(100)));
     lisp_print(fib(lisp_make_int(10)));
     lisp_print(fib(lisp_make_int(20)));
+
+    /* Cleanup: release all variables */
+    gc_shutdown();
     return 0;
 }

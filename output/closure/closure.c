@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "runtime/lisp.h"
 
+/* GC initialization is done in main() */
+
 /* Forward declarations */
 LispValue* make_adder(LispValue* n);
 
@@ -21,8 +23,14 @@ LispValue* make_adder_wrapper(LispValue* __args, LispValue* __env) {
 }
 
 int main(int argc, char** argv) {
+    gc_init();
+
     LispValue* add5 = NULL;
     add5 = make_adder(lisp_make_int(5));
     lisp_print(lisp_call_closure(add5, lisp_cons(lisp_make_int(10), NULL)));
+
+    /* Cleanup: release all variables */
+    lisp_release(add5);
+    gc_shutdown();
     return 0;
 }

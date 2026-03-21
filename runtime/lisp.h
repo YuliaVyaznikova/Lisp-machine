@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 typedef enum {
     LISP_NIL,
@@ -76,6 +77,16 @@ LispValue* lisp_is_nil_fn(LispValue* val);
 
 void lisp_retain(LispValue* val);
 void lisp_release(LispValue* val);
+
+void gc_init(void);
+void gc_shutdown(void);
+void gc_collect_cycles(void);
+void gc_add_object(LispValue* val);
+void gc_remove_object(LispValue* val);
+void gc_print_stats(void);
+size_t gc_get_allocated(void);
+size_t gc_get_freed(void);
+size_t gc_get_alive(void);
 
 LispValue* lisp_make_binding(const char* name, LispValue* value, LispValue* parent);
 LispValue* lisp_env_lookup(LispValue* env, const char* name);

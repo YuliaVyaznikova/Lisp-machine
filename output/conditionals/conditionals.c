@@ -2,11 +2,15 @@
 #include <stdlib.h>
 #include "runtime/lisp.h"
 
+/* GC initialization is done in main() */
+
 /* Forward declarations */
 
 
 
 int main(int argc, char** argv) {
+    gc_init();
+
     LispValue* __result_0 = NULL;
     if (lisp_is_true(lisp_make_symbol("true"))) {
         __result_0 = lisp_make_int(1);
@@ -28,5 +32,8 @@ int main(int argc, char** argv) {
         __result_2 = lisp_make_string("greater");
     }
     lisp_print(__result_2);
+
+    /* Cleanup: release all variables */
+    gc_shutdown();
     return 0;
 }

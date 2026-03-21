@@ -72,28 +72,59 @@ def tokenize(source: str) -> list:
             col += 1
             continue
         
-        if c == '~':
+        if c == ',' or c == '~':
             if i + 1 < len(source) and source[i + 1] == '@':
-                tokens.append(Token(TokenType.UNQUOTE_SPLICING, '~@', line, col))
+                tokens.append(Token(TokenType.UNQUOTE_SPLICING, c + '@', line, col))
                 i += 2
                 col += 2
                 continue
-            tokens.append(Token(TokenType.UNQUOTE, '~', line, col))
+            tokens.append(Token(TokenType.UNQUOTE, c, line, col))
             i += 1
             col += 1
             continue
         
         if c == '"':
             j = i + 1
+            value_chars = []
             while j < len(source) and source[j] != '"':
-                if source[j] == '\\':
+                if source[j] == '\\' and j + 1 < len(source):
+                    next_char = source[j + 1]
+                    if next_char == 'n':
+                        value_chars.append('\n')
+                    elif next_char == 't':
+                        value_chars.append('\t')
+                    elif next_char == 'r':
+                        value_chars.append('\r')
+                    elif next_char == '\\':
+                        value_chars.append('\\')
+                    elif next_char == '"':
+                        value_chars.append('"')
+                    else:
+                        value_chars.append(next_char)
                     j += 2
                 else:
+                    value_chars.append(source[j])
                     j += 1
-            value = source[i+1:j]
+            value = ''.join(value_chars)
             tokens.append(Token(TokenType.STRING, value, line, col))
             col += j - i + 1
             i = j + 1
+            continue
+        
+        if c == '-' and i + 1 < len(source) and source[i + 1].isdigit():
+            j = i + 1
+            while j < len(source) and (source[j].isdigit() or source[j] == '.'):
+                j += 1
+            text = source[i:j]
+            try:
+                if '.' in text:
+                    tokens.append(Token(TokenType.FLOAT, float(text), line, col))
+                else:
+                    tokens.append(Token(TokenType.NUMBER, int(text), line, col))
+            except ValueError:
+                tokens.append(Token(TokenType.SYMBOL, text, line, col))
+            col += j - i
+            i = j
             continue
         
         j = i

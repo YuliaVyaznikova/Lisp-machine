@@ -31,6 +31,43 @@ class TestTokenizer:
         tokens = tokenize("(+ 1 2)")
         assert tokens[0].type == TokenType.LPAREN
         assert tokens[4].type == TokenType.RPAREN
+    
+    def test_tokenize_negative_numbers(self):
+        tokens = tokenize("-5 -3.14")
+        assert tokens[0].type == TokenType.NUMBER
+        assert tokens[0].value == -5
+        assert tokens[1].type == TokenType.FLOAT
+        assert tokens[1].value == -3.14
+    
+    def test_tokenize_escape_sequences(self):
+        tokens = tokenize('"hello\\nworld"')
+        assert tokens[0].type == TokenType.STRING
+        assert tokens[0].value == "hello\nworld"
+        
+        tokens2 = tokenize('"tab\\there"')
+        assert tokens2[0].value == "tab\there"
+        
+        tokens3 = tokenize('"quote\\""')
+        assert tokens3[0].value == 'quote"'
+    
+    def test_tokenize_unquote_comma(self):
+        tokens = tokenize("`(if ,x ,y nil)")
+        assert tokens[0].type == TokenType.QUASIQUOTE
+        assert tokens[1].type == TokenType.LPAREN
+        assert tokens[2].type == TokenType.SYMBOL
+        assert tokens[2].value == "if"
+        assert tokens[3].type == TokenType.UNQUOTE
+        assert tokens[3].value == ","
+        assert tokens[4].type == TokenType.SYMBOL
+        assert tokens[4].value == "x"
+        assert tokens[5].type == TokenType.UNQUOTE
+        assert tokens[5].value == ","
+    
+    def test_tokenize_unquote_tilde(self):
+        tokens = tokenize("`(if ~x ~y nil)")
+        assert tokens[0].type == TokenType.QUASIQUOTE
+        assert tokens[3].type == TokenType.UNQUOTE
+        assert tokens[3].value == "~"
 
 class TestParser:
     def test_parse_int(self):
