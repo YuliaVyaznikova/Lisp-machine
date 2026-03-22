@@ -18,7 +18,7 @@ Lists: OK
 GC Stats: allocated=0, freed=0, alive=0
 
 --- Test 1: Basic allocation ---
-Created 3 integers: a=0x261823d0, b=0x26182400, c=0x26182430
+Created 3 integers: a=0x1324b3d0, b=0x1324b400, c=0x1324b430
 GC Stats: allocated=3, freed=0, alive=3
 PASS: All objects tracked, refcounts correct
 
@@ -28,8 +28,8 @@ GC Stats: allocated=3, freed=3, alive=0
 PASS: Objects freed (freed count should be 3)
 
 --- Test 3: Cons pair ---
-Created x=0x26182430 (refcount=1), y=0x26182400 (refcount=1)
-Created pair=0x261823d0
+Created x=0x1324b430 (refcount=1), y=0x1324b400 (refcount=1)
+Created pair=0x1324b3d0
 After cons: x refcount=2, y refcount=2 (should be 2 each)
 GC Stats: allocated=6, freed=3, alive=3
 Released pair

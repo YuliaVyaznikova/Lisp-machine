@@ -30,7 +30,7 @@ class SymbolTable:
         return self.lookup(name) is not None
 
 class SemanticAnalyzer:
-    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'apply', 'while', 'set!', 'length', 'append', 'reverse', 'not', 'mod', 'abs', 'min', 'max', 'nil?'}
+    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'apply', 'while', 'set!', 'length', 'append', 'reverse', 'not', 'mod', 'abs', 'min', 'max', 'nil?', 'defmacro', 'quasiquote', 'unquote', 'unquote-splicing'}
     
     def __init__(self):
         self.global_table = SymbolTable()
@@ -52,6 +52,8 @@ class SemanticAnalyzer:
                     self.global_table.define(node.name, 'function', node.params)
                 else:
                     self.global_table.define(node.name, 'variable')
+            elif isinstance(node, DefmacroNode):
+                self.global_table.define(node.name, 'macro', node.params)
     
     def _analyze_node(self, node: ASTNode, table: SymbolTable):
         if isinstance(node, IntNode) or isinstance(node, FloatNode) or isinstance(node, StringNode) or isinstance(node, NilNode):
@@ -59,7 +61,7 @@ class SemanticAnalyzer:
         
         if isinstance(node, SymbolNode):
             if node.name not in self.BUILTINS and not table.has(node.name):
-                self.warnings.append(f"Undefined symbol: {node.name}")
+                self.errors.append(f"Undefined symbol: {node.name}")
             return
         
         if isinstance(node, QuoteNode):
@@ -92,15 +94,18 @@ class SemanticAnalyzer:
             self._analyze_node(node.body, local_table)
             return
         
-        if isinstance(node, WhileNode):
-            self._analyze_node(node.condition, table)
-            for body_node in node.body:
-                self._analyze_node(body_node, table)
+        if isinstance(node, DefmacroNode):
+            local_table = SymbolTable(table)
+            for param in node.params:
+                local_table.define(param, 'parameter')
+            self._analyze_node(node.body, local_table)
             return
         
-        if isinstance(node, SetNode):
-            if not table.has(node.name):
-                self.warnings.append(f"set! on undefined variable: {node.name}")
+        if isinstance(node, UnquoteNode):
+            self._analyze_node(node.value, table)
+            return
+        
+        if isinstance(node, UnquoteSplicingNode):
             self._analyze_node(node.value, table)
             return
     
