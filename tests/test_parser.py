@@ -183,6 +183,90 @@ class TestExamples:
         code = gen.generate(ast)
         assert 'lisp_cons' in code or 'lisp_make_symbol' in code
 
+class TestMacros:
+    def test_parse_defmacro_simple(self):
+        ast = parse('(defmacro inc (n) `(+ ,n 1))')
+        assert len(ast) == 1
+        node = ast[0]
+        assert isinstance(node, DefmacroNode)
+        assert node.name == 'inc'
+        assert node.params == ['n']
+    
+    def test_parse_defmacro_multi_params(self):
+        ast = parse('(defmacro when (condition body) `(if ,condition ,body nil))')
+        assert len(ast) == 1
+        node = ast[0]
+        assert node.name == 'when'
+        assert node.params == ['condition', 'body']
+    
+    def test_macro_expansion_when(self):
+        from macro.expander import expand_macros
+        source = '''
+        (defmacro when (condition body) `(if ,condition ,body nil))
+        (when (= 1 1) "yes")
+        '''
+        ast = parse(source)
+        expanded = expand_macros(ast)
+        assert len(expanded) == 1
+        call = expanded[0]
+        assert isinstance(call, IfNode) or (isinstance(call, ListNode) and 
+                                            isinstance(call.elements[0], SymbolNode) and 
+                                            call.elements[0].name == 'if')
+    
+    def test_macro_expansion_and(self):
+        from macro.expander import expand_macros
+        source = '''
+        (defmacro and (a b) `(if ,a ,b nil))
+        (and true false)
+        '''
+        ast = parse(source)
+        expanded = expand_macros(ast)
+        assert len(expanded) == 1
+    
+    def test_macro_expansion_or(self):
+        from macro.expander import expand_macros
+        source = '''
+        (defmacro or (a b) `(if ,a true ,b))
+        (or false true)
+        '''
+        ast = parse(source)
+        expanded = expand_macros(ast)
+        assert len(expanded) == 1
+    
+    def test_macro_expansion_cond(self):
+        from macro.expander import expand_macros
+        source = '''
+        (defmacro cond (p1 p2 p3) 
+          `(if ,(first p1) ,(first (rest p1))
+               (if ,(first p2) ,(first (rest p2))
+                   (if ,(first p3) ,(first (rest p3)) nil))))
+        (cond ((= 1 2) "a") ((= 1 1) "b") (true "c"))
+        '''
+        ast = parse(source)
+        expanded = expand_macros(ast)
+        assert len(expanded) == 1
+    
+    def test_nested_macro_calls(self):
+        from macro.expander import expand_macros
+        source = '''
+        (defmacro inc (n) `(+ ,n 1))
+        (inc (inc 5))
+        '''
+        ast = parse(source)
+        expanded = expand_macros(ast)
+        assert len(expanded) == 1
+    
+    def test_multiple_macro_calls(self):
+        from macro.expander import expand_macros
+        source = '''
+        (defmacro inc (n) `(+ ,n 1))
+        (inc 5)
+        (inc 10)
+        '''
+        ast = parse(source)
+        expanded = expand_macros(ast)
+        assert len(expanded) == 2
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v"])

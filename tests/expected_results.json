@@ -51,8 +51,7 @@
     },
     {
       "file": "examples/macros.lisp",
-      "expected_output": "\"=== when macro ===\"\nnil\nnil\n\"=== unless macro ===\"\nnil\nnil\n\"=== let macro ===\"\nnil\nnil\n\"=== swap macro ===\"\nnil\n\"=== inc macro ===\"\nnil\nnil\n\"=== dec macro ===\"\nnil\nnil\n\"=== assert macro ===\"\n",
-      "known_issue": "quasiquote/unquote not fully implemented"
+      "expected_output": "\"=== when macro ===\"\n\"true branch\"\nnil\n\"=== unless macro ===\"\n\"condition was false\"\nnil\n\"=== cond macro ===\"\nnil\nnil\n\"=== and macro ===\"\ntrue\nfalse\ntrue\ntrue\n\"=== or macro ===\"\ntrue\ntrue\ntrue\ntrue\n\"=== let macro ===\"\nnil\nnil\n\"=== swap macro ===\"\nnil\n\"=== inc macro ===\"\nnil\nnil\n\"=== dec macro ===\"\nnil\nnil\n\"=== assert macro ===\"\n\"=== not-nil? macro ===\"\ntrue\nfalse\n"
     }
   ]
 }

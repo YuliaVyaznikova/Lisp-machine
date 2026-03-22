@@ -1,9 +1,22 @@
 "=== when macro ==="
-nil
+"true branch"
 nil
 "=== unless macro ==="
+"condition was false"
+nil
+"=== cond macro ==="
 nil
 nil
+"=== and macro ==="
+true
+false
+true
+true
+"=== or macro ==="
+true
+true
+true
+true
 "=== let macro ==="
 nil
 nil
@@ -16,3 +29,6 @@ nil
 nil
 nil
 "=== assert macro ==="
+"=== not-nil? macro ==="
+true
+false

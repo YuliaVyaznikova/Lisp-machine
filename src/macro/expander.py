@@ -55,6 +55,9 @@ class MacroExpander:
                 bindings[param] = args[i]
         
         expanded = self._substitute(macro.body, bindings)
+        # Unwrap QuoteNode if present (quasiquote template)
+        if isinstance(expanded, QuoteNode):
+            expanded = expanded.value
         return self.expand(expanded)
     
     def _substitute(self, node: ASTNode, bindings: Dict[str, ASTNode]) -> ASTNode:
@@ -67,13 +70,22 @@ class MacroExpander:
             return ListNode(elements=[self._substitute(e, bindings) for e in node.elements])
         
         if isinstance(node, QuoteNode):
-            return node
+            # For quasiquote, substitute inside but handle unquotes specially
+            return QuoteNode(value=self._substitute(node.value, bindings))
         
         if isinstance(node, UnquoteNode):
+            # Replace unquote with the substituted value
             return self._substitute(node.value, bindings)
         
         if isinstance(node, UnquoteSplicingNode):
             return node
+        
+        if isinstance(node, IfNode):
+            return IfNode(
+                condition=self._substitute(node.condition, bindings),
+                then_branch=self._substitute(node.then_branch, bindings),
+                else_branch=self._substitute(node.else_branch, bindings)
+            )
         
         return node
 

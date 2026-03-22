@@ -71,21 +71,19 @@ class DefmacroHandler(SpecialFormHandler):
         return name == "defmacro"
     
     def parse(self, elements: list, start: Token) -> ASTNode:
-        if len(elements) < 3:
-            raise ParseError("defmacro requires name and body", start)
+        if len(elements) < 4:
+            raise ParseError("defmacro requires name, params, and body", start)
         
-        second = elements[1]
-        if isinstance(second, SymbolNode):
-            return DefmacroNode(name=second.name, body=elements[2])
+        name_node = elements[1]
+        if not isinstance(name_node, SymbolNode):
+            raise ParseError("defmacro requires name as symbol", start)
         
-        if isinstance(second, ListNode):
-            if not second.elements or not isinstance(second.elements[0], SymbolNode):
-                raise ParseError("defmacro requires name", start)
-            name = second.elements[0].name
-            params = [p.name for p in second.elements[1:] if isinstance(p, SymbolNode)]
-            return DefmacroNode(name=name, params=params, body=elements[2])
+        params_node = elements[2]
+        if not isinstance(params_node, ListNode):
+            raise ParseError("defmacro requires params as list", start)
         
-        raise ParseError("invalid defmacro syntax", start)
+        params = [p.name for p in params_node.elements if isinstance(p, SymbolNode)]
+        return DefmacroNode(name=name_node.name, params=params, body=elements[3])
 
 class Parser:
     def __init__(self, tokens: list):

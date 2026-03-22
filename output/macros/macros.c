@@ -12,11 +12,132 @@ int main(int argc, char** argv) {
     gc_init();
 
     lisp_print(lisp_make_string("=== when macro ==="));
-    lisp_print(NULL);
-    lisp_print(NULL);
+    LispValue* __result_0 = NULL;
+    if (lisp_is_true(lisp_eq(lisp_make_int(1), lisp_make_int(1)))) {
+        __result_0 = lisp_make_string("true branch");
+    } else {
+        __result_0 = NULL;
+    }
+    lisp_print(__result_0);
+    LispValue* __result_1 = NULL;
+    if (lisp_is_true(lisp_eq(lisp_make_int(1), lisp_make_int(2)))) {
+        __result_1 = lisp_make_string("should not print");
+    } else {
+        __result_1 = NULL;
+    }
+    lisp_print(__result_1);
     lisp_print(lisp_make_string("=== unless macro ==="));
-    lisp_print(NULL);
-    lisp_print(NULL);
+    LispValue* __result_2 = NULL;
+    if (lisp_is_true(lisp_eq(lisp_make_int(1), lisp_make_int(2)))) {
+        __result_2 = NULL;
+    } else {
+        __result_2 = lisp_make_string("condition was false");
+    }
+    lisp_print(__result_2);
+    LispValue* __result_3 = NULL;
+    if (lisp_is_true(lisp_eq(lisp_make_int(1), lisp_make_int(1)))) {
+        __result_3 = NULL;
+    } else {
+        __result_3 = lisp_make_string("should not print");
+    }
+    lisp_print(__result_3);
+    lisp_print(lisp_make_string("=== cond macro ==="));
+    LispValue* __result_4 = NULL;
+    if (lisp_is_true(lisp_first(NULL))) {
+        __result_4 = lisp_first(lisp_rest(NULL));
+    } else {
+        LispValue* __result_5 = NULL;
+        if (lisp_is_true(lisp_first(NULL))) {
+            __result_5 = lisp_first(lisp_rest(NULL));
+        } else {
+            LispValue* __result_6 = NULL;
+            if (lisp_is_true(lisp_first(NULL))) {
+                __result_6 = lisp_first(lisp_rest(NULL));
+            } else {
+                __result_6 = NULL;
+            }
+            __result_5 = __result_6;
+        }
+        __result_4 = __result_5;
+    }
+    lisp_print(__result_4);
+    LispValue* __result_7 = NULL;
+    if (lisp_is_true(lisp_first(NULL))) {
+        __result_7 = lisp_first(lisp_rest(NULL));
+    } else {
+        LispValue* __result_8 = NULL;
+        if (lisp_is_true(lisp_first(NULL))) {
+            __result_8 = lisp_first(lisp_rest(NULL));
+        } else {
+            LispValue* __result_9 = NULL;
+            if (lisp_is_true(lisp_first(NULL))) {
+                __result_9 = lisp_first(lisp_rest(NULL));
+            } else {
+                __result_9 = NULL;
+            }
+            __result_8 = __result_9;
+        }
+        __result_7 = __result_8;
+    }
+    lisp_print(__result_7);
+    lisp_print(lisp_make_string("=== and macro ==="));
+    LispValue* __result_10 = NULL;
+    if (lisp_is_true(lisp_make_symbol("true"))) {
+        __result_10 = lisp_make_symbol("true");
+    } else {
+        __result_10 = NULL;
+    }
+    lisp_print(__result_10);
+    LispValue* __result_11 = NULL;
+    if (lisp_is_true(lisp_make_symbol("true"))) {
+        __result_11 = lisp_make_symbol("false");
+    } else {
+        __result_11 = NULL;
+    }
+    lisp_print(__result_11);
+    LispValue* __result_12 = NULL;
+    if (lisp_is_true(lisp_make_symbol("false"))) {
+        __result_12 = lisp_make_symbol("true");
+    } else {
+        __result_12 = NULL;
+    }
+    lisp_print(__result_12);
+    LispValue* __result_13 = NULL;
+    if (lisp_is_true(lisp_eq(lisp_make_int(1), lisp_make_int(1)))) {
+        __result_13 = lisp_eq(lisp_make_int(2), lisp_make_int(2));
+    } else {
+        __result_13 = NULL;
+    }
+    lisp_print(__result_13);
+    lisp_print(lisp_make_string("=== or macro ==="));
+    LispValue* __result_14 = NULL;
+    if (lisp_is_true(lisp_make_symbol("true"))) {
+        __result_14 = lisp_make_symbol("true");
+    } else {
+        __result_14 = lisp_make_symbol("false");
+    }
+    lisp_print(__result_14);
+    LispValue* __result_15 = NULL;
+    if (lisp_is_true(lisp_make_symbol("false"))) {
+        __result_15 = lisp_make_symbol("true");
+    } else {
+        __result_15 = lisp_make_symbol("true");
+    }
+    lisp_print(__result_15);
+    LispValue* __result_16 = NULL;
+    if (lisp_is_true(lisp_make_symbol("false"))) {
+        __result_16 = lisp_make_symbol("true");
+    } else {
+        __result_16 = lisp_make_symbol("false");
+    }
+    lisp_print(__result_16);
+    LispValue* __result_17 = NULL;
+    if (lisp_is_true(lisp_eq(lisp_make_int(1), lisp_make_int(2)))) {
+        __result_17 = lisp_make_symbol("true");
+    } else {
+        __result_17 = lisp_eq(lisp_make_int(2), lisp_make_int(2));
+    }
+    lisp_print(__result_17);
     lisp_print(lisp_make_string("=== let macro ==="));
     lisp_print(NULL);
     lisp_print(NULL);
@@ -29,6 +150,21 @@ int main(int argc, char** argv) {
     lisp_print(NULL);
     lisp_print(NULL);
     lisp_print(lisp_make_string("=== assert macro ==="));
+    lisp_print(lisp_make_string("=== not-nil? macro ==="));
+    LispValue* __result_18 = NULL;
+    if (lisp_is_true(lisp_make_int(1))) {
+        __result_18 = lisp_make_symbol("true");
+    } else {
+        __result_18 = lisp_make_symbol("false");
+    }
+    lisp_print(__result_18);
+    LispValue* __result_19 = NULL;
+    if (lisp_is_true(NULL)) {
+        __result_19 = lisp_make_symbol("true");
+    } else {
+        __result_19 = lisp_make_symbol("false");
+    }
+    lisp_print(__result_19);
 
     /* Cleanup: release all variables */
     gc_shutdown();
