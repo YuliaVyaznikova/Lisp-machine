@@ -59,10 +59,13 @@ class LambdaHandler(SpecialFormHandler):
             raise ParseError("lambda requires params and body", start)
         
         params_node = elements[1]
-        if not isinstance(params_node, ListNode):
+        if isinstance(params_node, NilNode):
+            params = []
+        elif isinstance(params_node, ListNode):
+            params = [p.name for p in params_node.elements if isinstance(p, SymbolNode)]
+        else:
             raise ParseError("lambda params must be a list", start)
-        
-        params = [p.name for p in params_node.elements if isinstance(p, SymbolNode)]
+            
         body = elements[2]
         return LambdaNode(params=params, body=body)
 
@@ -79,10 +82,13 @@ class DefmacroHandler(SpecialFormHandler):
             raise ParseError("defmacro requires name as symbol", start)
         
         params_node = elements[2]
-        if not isinstance(params_node, ListNode):
+        if isinstance(params_node, NilNode):
+            params = []
+        elif isinstance(params_node, ListNode):
+            params = [p.name for p in params_node.elements if isinstance(p, SymbolNode)]
+        else:
             raise ParseError("defmacro requires params as list", start)
-        
-        params = [p.name for p in params_node.elements if isinstance(p, SymbolNode)]
+            
         return DefmacroNode(name=name_node.name, params=params, body=elements[3])
 
 class Parser:
@@ -90,6 +96,7 @@ class Parser:
         self.tokens = tokens
         self.pos = 0
         self.handlers = [IfHandler(), DefineHandler(), LambdaHandler(), DefmacroHandler()]
+        self.quasiquote_depth = 0
     
     def current(self) -> Token:
         if self.pos < len(self.tokens):
@@ -144,15 +151,24 @@ class Parser:
         
         if tok.type == TokenType.QUASIQUOTE:
             self.advance()
-            return self._parse_quasiquote(self.parse_expr())
+            self.quasiquote_depth += 1
+            node = self.parse_expr()
+            self.quasiquote_depth -= 1
+            return QuoteNode(value=node)
         
         if tok.type == TokenType.UNQUOTE:
             self.advance()
-            return UnquoteNode(value=self.parse_expr())
+            self.quasiquote_depth -= 1
+            node = self.parse_expr()
+            self.quasiquote_depth += 1
+            return UnquoteNode(value=node)
         
         if tok.type == TokenType.UNQUOTE_SPLICING:
             self.advance()
-            return UnquoteSplicingNode(value=self.parse_expr())
+            self.quasiquote_depth -= 1
+            node = self.parse_expr()
+            self.quasiquote_depth += 1
+            return UnquoteSplicingNode(value=node)
         
         if tok.type == TokenType.LPAREN:
             return self.parse_list()
@@ -174,30 +190,14 @@ class Parser:
         if not elements:
             return NilNode()
         
-        if isinstance(elements[0], SymbolNode):
+        # Если мы не в квазицитате, обрабатываем формы вроде lambda/if штатно
+        if self.quasiquote_depth == 0 and isinstance(elements[0], SymbolNode):
             name = elements[0].name
             for handler in self.handlers:
                 if handler.can_handle(name):
                     return handler.parse(elements, start)
         
         return ListNode(elements=elements)
-
-    def _parse_quasiquote(self, node: ASTNode) -> ASTNode:
-        if isinstance(node, UnquoteNode):
-            return node
-        if isinstance(node, UnquoteSplicingNode):
-            return node
-        if isinstance(node, ListNode):
-            new_elements = []
-            for elem in node.elements:
-                if isinstance(elem, UnquoteSplicingNode):
-                    new_elements.append(elem)
-                elif isinstance(elem, UnquoteNode):
-                    new_elements.append(elem)
-                else:
-                    new_elements.append(self._parse_quasiquote(elem))
-            return ListNode(elements=new_elements)
-        return QuoteNode(value=node)
 
 def parse(source: str) -> list:
     tokens = tokenize(source)

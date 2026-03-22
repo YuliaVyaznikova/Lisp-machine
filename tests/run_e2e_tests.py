@@ -13,7 +13,8 @@ def run_test(test: dict, project_root: Path) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     
     c_file = output_dir / f"{stem}.c"
-    binary = output_dir / stem
+    import os
+    binary = output_dir / (f"{stem}.exe" if os.name == "nt" else stem)
     output_file = output_dir / f"{stem}.output"
     
     result = {

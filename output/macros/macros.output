@@ -5,8 +5,8 @@ nil
 "condition was false"
 nil
 "=== cond macro ==="
-nil
-nil
+"one equals one"
+"fallback"
 "=== and macro ==="
 true
 false
@@ -18,17 +18,19 @@ true
 true
 true
 "=== let macro ==="
-nil
-nil
+15
+40
 "=== swap macro ==="
-nil
+(2 1)
 "=== inc macro ==="
-nil
-nil
+6
+12
 "=== dec macro ==="
-nil
-nil
+4
+8
 "=== assert macro ==="
+("PASS:" . "1 equals 1")
+("PASS:" . "1 is less than 2")
 "=== not-nil? macro ==="
 true
 false

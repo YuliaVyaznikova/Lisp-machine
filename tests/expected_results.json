@@ -51,7 +51,11 @@
     },
     {
       "file": "examples/macros.lisp",
-      "expected_output": "\"=== when macro ===\"\n\"true branch\"\nnil\n\"=== unless macro ===\"\n\"condition was false\"\nnil\n\"=== cond macro ===\"\nnil\nnil\n\"=== and macro ===\"\ntrue\nfalse\ntrue\ntrue\n\"=== or macro ===\"\ntrue\ntrue\ntrue\ntrue\n\"=== let macro ===\"\nnil\nnil\n\"=== swap macro ===\"\nnil\n\"=== inc macro ===\"\nnil\nnil\n\"=== dec macro ===\"\nnil\nnil\n\"=== assert macro ===\"\n\"=== not-nil? macro ===\"\ntrue\nfalse\n"
+      "expected_output": "\"=== when macro ===\"\n\"true branch\"\nnil\n\"=== unless macro ===\"\n\"condition was false\"\nnil\n\"=== cond macro ===\"\n\"one equals one\"\n\"fallback\"\n\"=== and macro ===\"\ntrue\nfalse\ntrue\ntrue\n\"=== or macro ===\"\ntrue\ntrue\ntrue\ntrue\n\"=== let macro ===\"\n15\n40\n\"=== swap macro ===\"\n(2 1)\n\"=== inc macro ===\"\n6\n12\n\"=== dec macro ===\"\n4\n8\n\"=== assert macro ===\"\n(\"PASS:\" . \"1 equals 1\")\n(\"PASS:\" . \"1 is less than 2\")\n\"=== not-nil? macro ===\"\ntrue\nfalse\n"
+    },
+    {
+      "file": "examples/lazy.lisp",
+      "expected_output": "(4 16 36 64 100)\n"
     }
   ]
 }

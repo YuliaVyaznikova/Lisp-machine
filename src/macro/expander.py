@@ -18,7 +18,38 @@ class MacroExpander:
             first = node.elements[0]
             if isinstance(first, SymbolNode) and first.name in self.macros:
                 return self._expand_macro(first.name, node.elements[1:])
-            return ListNode(elements=[self.expand(e) for e in node.elements])
+            
+            expanded_elements = [self.expand(e) for e in node.elements]
+            first_exp = expanded_elements[0]
+            
+            # После макроподстановок мы "просыпаемся" и снова конвертируем 
+            # обычные списки в формы IfNode/LambdaNode, если необходимо.
+            if isinstance(first_exp, SymbolNode):
+                name = first_exp.name
+                if name == "if" and len(expanded_elements) >= 3:
+                    return IfNode(
+                        condition=expanded_elements[1],
+                        then_branch=expanded_elements[2],
+                        else_branch=expanded_elements[3] if len(expanded_elements) > 3 else NilNode()
+                    )
+                if name == "lambda" and len(expanded_elements) >= 3:
+                    params_node = expanded_elements[1]
+                    params = []
+                    if isinstance(params_node, ListNode):
+                        params = [p.name for p in params_node.elements if isinstance(p, SymbolNode)]
+                    elif isinstance(params_node, NilNode):
+                        params = []
+                    return LambdaNode(params=params, body=expanded_elements[2])
+                if name == "define" and len(expanded_elements) >= 3:
+                    second = expanded_elements[1]
+                    if isinstance(second, SymbolNode):
+                        return DefineNode(name=second.name, value=expanded_elements[2])
+                    if isinstance(second, ListNode) and second.elements and isinstance(second.elements[0], SymbolNode):
+                        fname = second.elements[0].name
+                        params = [p.name for p in second.elements[1:] if isinstance(p, SymbolNode)]
+                        return DefineNode(name=fname, params=params, body=expanded_elements[2])
+            
+            return ListNode(elements=expanded_elements)
         
         if isinstance(node, IfNode):
             return IfNode(
@@ -47,6 +78,31 @@ class MacroExpander:
         
         return node
     
+    def _eval_compile_time(self, node: ASTNode) -> ASTNode:
+        if isinstance(node, ListNode) and node.elements:
+            first = node.elements[0]
+            if isinstance(first, SymbolNode):
+                if first.name == "first" and len(node.elements) == 2:
+                    arg = self._eval_compile_time(node.elements[1])
+                    if isinstance(arg, ListNode) and arg.elements:
+                        return arg.elements[0]
+                    if isinstance(arg, QuoteNode) and isinstance(arg.value, ListNode) and arg.value.elements:
+                        return QuoteNode(value=arg.value.elements[0])
+                if first.name == "rest" and len(node.elements) == 2:
+                    arg = self._eval_compile_time(node.elements[1])
+                    if isinstance(arg, ListNode) and arg.elements:
+                        return ListNode(elements=arg.elements[1:])
+                    if isinstance(arg, QuoteNode) and isinstance(arg.value, ListNode) and arg.value.elements:
+                        return QuoteNode(value=ListNode(elements=arg.value.elements[1:]))
+        
+        if isinstance(node, ListNode):
+            return ListNode(elements=[self._eval_compile_time(e) for e in node.elements])
+        if isinstance(node, UnquoteNode):
+            return UnquoteNode(value=self._eval_compile_time(node.value))
+        if isinstance(node, QuoteNode):
+            return QuoteNode(value=self._eval_compile_time(node.value))
+        return node
+
     def _expand_macro(self, name: str, args: List[ASTNode]) -> ASTNode:
         macro = self.macros[name]
         bindings = {}
@@ -55,7 +111,8 @@ class MacroExpander:
                 bindings[param] = args[i]
         
         expanded = self._substitute(macro.body, bindings)
-        # Unwrap QuoteNode if present (quasiquote template)
+        expanded = self._eval_compile_time(expanded)
+        
         if isinstance(expanded, QuoteNode):
             expanded = expanded.value
         return self.expand(expanded)
@@ -70,11 +127,10 @@ class MacroExpander:
             return ListNode(elements=[self._substitute(e, bindings) for e in node.elements])
         
         if isinstance(node, QuoteNode):
-            # For quasiquote, substitute inside but handle unquotes specially
-            return QuoteNode(value=self._substitute(node.value, bindings))
+            subbed = self._substitute(node.value, bindings)
+            return QuoteNode(value=subbed)
         
         if isinstance(node, UnquoteNode):
-            # Replace unquote with the substituted value
             return self._substitute(node.value, bindings)
         
         if isinstance(node, UnquoteSplicingNode):
@@ -85,6 +141,12 @@ class MacroExpander:
                 condition=self._substitute(node.condition, bindings),
                 then_branch=self._substitute(node.then_branch, bindings),
                 else_branch=self._substitute(node.else_branch, bindings)
+            )
+            
+        if isinstance(node, LambdaNode):
+            return LambdaNode(
+                params=node.params,
+                body=self._substitute(node.body, bindings)
             )
         
         return node

@@ -64,8 +64,13 @@
       "file": "examples/macros.lisp",
       "status": "pass",
       "message": "OK"
+    },
+    {
+      "file": "examples/lazy.lisp",
+      "status": "pass",
+      "message": "OK"
     }
   ],
-  "passed": 13,
+  "passed": 14,
   "failed": 0
 }

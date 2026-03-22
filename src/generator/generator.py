@@ -32,6 +32,11 @@ class CodeGenerator:
             'print': 'lisp_print_wrapper',
         }
     
+    def _mangle_name(self, name: str) -> str:
+        if name in ["true", "false", "nil"]:
+            return name
+        return name.replace('-', '_').replace('?', '_p').replace('!', '_bang')
+    
     def _is_tail_call(self, node: ASTNode, func_name: str) -> bool:
         if isinstance(node, ListNode) and node.elements:
             first = node.elements[0]
@@ -84,22 +89,13 @@ class CodeGenerator:
         
         return len(calls) > 0
     
-    def _get_recursive_call_args(self, node: ListNode, func_name: str) -> Optional[List[ASTNode]]:
-        if not node.elements:
-            return None
-        first = node.elements[0]
-        if isinstance(first, SymbolNode):
-            mangled = self._mangle_name(first.name)
-            if mangled == func_name:
-                return node.elements[1:]
-        return None
-    
     def _find_free_vars(self, node: ASTNode, bound: set) -> set:
         if isinstance(node, IntNode) or isinstance(node, FloatNode) or isinstance(node, StringNode) or isinstance(node, NilNode):
             return set()
         
         if isinstance(node, SymbolNode):
-            if node.name not in bound and node.name not in self.BUILTINS:
+            mangled = self._mangle_name(node.name)
+            if node.name not in bound and node.name not in self.BUILTINS and mangled not in self.func_names and node.name not in self.variables:
                 return {node.name}
             return set()
         
@@ -153,20 +149,17 @@ class CodeGenerator:
         return "\n\n".join(parts)
     
     def _header(self) -> str:
-        return '''#include <stdio.h>
+        return """#include <stdio.h>
 #include <stdlib.h>
 #include "runtime/lisp.h"
 
-/* GC initialization is done in main() */'''
-    
-    def _mangle_name(self, name: str) -> str:
-        return name.replace('-', '_').replace('?', '_p')
+/* GC initialization is done in main() */"""
     
     def _forward_decls(self, nodes: List[ASTNode]) -> str:
         decls = []
         for node in nodes:
             if isinstance(node, DefineNode) and node.params:
-                params_str = ", ".join(["LispValue* " + p for p in node.params])
+                params_str = ", ".join(["LispValue* " + self._mangle_name(p) for p in node.params])
                 decls.append(f"LispValue* {self._mangle_name(node.name)}({params_str});")
         if decls:
             return "/* Forward declarations */\n" + "\n".join(decls)
@@ -194,7 +187,7 @@ class CodeGenerator:
         self.statements = []
         func_stmts = []
         
-        params_str = ", ".join(["LispValue* " + p for p in node.params])
+        params_str = ", ".join(["LispValue* " + self._mangle_name(p) for p in node.params])
         func_stmts.append(f"LispValue* {mangled}({params_str}) {{")
         
         if self._can_optimize_tail_recursion(node):
@@ -212,8 +205,8 @@ class CodeGenerator:
         
         wrapper_stmts = [f"LispValue* {mangled}_wrapper(LispValue* __args, LispValue* __env) {{"]
         for i, p in enumerate(node.params):
-            wrapper_stmts.append(f"    LispValue* {p} = lisp_list_get(__args, {i});")
-        args_str = ", ".join(node.params)
+            wrapper_stmts.append(f"    LispValue* {self._mangle_name(p)} = lisp_list_get(__args, {i});")
+        args_str = ", ".join(self._mangle_name(p) for p in node.params)
         wrapper_stmts.append(f"    return {mangled}({args_str});")
         wrapper_stmts.append("}")
         
@@ -226,7 +219,7 @@ class CodeGenerator:
         stmts = []
         
         for p in node.params:
-            stmts.append(f"    LispValue* __new_{p} = NULL;")
+            stmts.append(f"    LispValue* __new_{self._mangle_name(p)} = NULL;")
         
         stmts.append("    while (1) {")
         
@@ -281,12 +274,12 @@ class CodeGenerator:
                     args = node.elements[1:]
                     for i, p in enumerate(params):
                         if i < len(args):
-                            stmts.append(f"            __new_{p} = {self._gen_expr(args[i])};")
+                            stmts.append(f"            __new_{self._mangle_name(p)} = {self._gen_expr(args[i])};")
                         else:
-                            stmts.append(f"            __new_{p} = NULL;")
+                            stmts.append(f"            __new_{self._mangle_name(p)} = NULL;")
                     
                     for p in params:
-                        stmts.append(f"            {p} = __new_{p};")
+                        stmts.append(f"            {self._mangle_name(p)} = __new_{self._mangle_name(p)};")
                     
                     stmts.append("            continue;")
                     return stmts
@@ -347,7 +340,7 @@ class CodeGenerator:
             if node.name in self.variables:
                 return self._mangle_name(node.name)
             if node.name in self.local_vars:
-                return node.name
+                return self._mangle_name(node.name)
             if node.name in self.builtin_wrappers:
                 return f"lisp_make_closure({self.builtin_wrappers[node.name]}, NULL)"
             mangled = self._mangle_name(node.name)
@@ -409,6 +402,23 @@ class CodeGenerator:
             return f"lisp_call_closure({closure}, {args_list})"
         
         if isinstance(func, SymbolNode):
+            if func.name == "if" and len(args) >= 2:
+                cond = args[0]
+                then_b = args[1]
+                else_b = args[2] if len(args) > 2 else NilNode()
+                return self._gen_if(IfNode(condition=cond, then_branch=then_b, else_branch=else_b))
+            
+            if func.name == "lambda" and len(args) >= 2:
+                params = []
+                if isinstance(args[0], ListNode):
+                    params = [p.name for p in args[0].elements if isinstance(p, SymbolNode)]
+                elif isinstance(args[0], NilNode):
+                    params = []
+                return self._gen_lambda(LambdaNode(params=params, body=args[1]))
+                
+            if func.name == "let" and len(args) >= 3:
+                return self._gen_expr(ApplicationNode(function=LambdaNode(params=[args[0].name], body=args[2]), arguments=[args[1]]))
+
             match func.name:
                 case "+":
                     return self._gen_binop("lisp_add", args)
@@ -464,10 +474,17 @@ class CodeGenerator:
                         return f"lisp_call_closure({self._mangle_name(func.name)}, {args_list})"
                     if func.name in self.local_vars:
                         args_list = self._build_args_list(args)
-                        return f"lisp_call_closure({func.name}, {args_list})"
-                    return "NULL"
+                        return f"lisp_call_closure({self._mangle_name(func.name)}, {args_list})"
+                    
+                    # Если функция нигде не найдена, вычисляем её как выражение и вызываем замыкание
+                    func_expr = self._gen_expr(func)
+                    args_list = self._build_args_list(args)
+                    return f"lisp_call_closure({func_expr}, {args_list})"
         
-        return "NULL"
+        # Fallback для произвольного выражения возвращающего функцию
+        func_expr = self._gen_expr(func)
+        args_list = self._build_args_list(args)
+        return f"lisp_call_closure({func_expr}, {args_list})"
     
     def _build_args_list(self, args: List[ASTNode]) -> str:
         if not args:
@@ -532,10 +549,10 @@ class CodeGenerator:
         func_lines = [f"LispValue* {func_name}(LispValue* __args, LispValue* __env) {{"]
         
         for i, p in enumerate(node.params):
-            func_lines.append(f"    LispValue* {p} = lisp_list_get(__args, {i});")
+            func_lines.append(f"    LispValue* {self._mangle_name(p)} = lisp_list_get(__args, {i});")
         
         for fv in sorted(free_vars):
-            func_lines.append(f"    LispValue* {fv} = lisp_env_lookup(__env, \"{fv}\");")
+            func_lines.append(f"    LispValue* {self._mangle_name(fv)} = lisp_env_lookup(__env, \"{fv}\");")
         
         body_expr = self._gen_expr(node.body)
         if body_expr:
@@ -549,5 +566,5 @@ class CodeGenerator:
         
         env_build = "NULL"
         for fv in sorted(free_vars):
-            env_build = f'lisp_env_extend({env_build}, "{fv}", {fv})'
+            env_build = f'lisp_env_extend({env_build}, "{fv}", {self._mangle_name(fv)})'
         return f"lisp_make_closure({func_name}, {env_build})"
