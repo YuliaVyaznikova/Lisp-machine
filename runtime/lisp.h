@@ -83,6 +83,8 @@ void gc_shutdown(void);
 void gc_collect_cycles(void);
 void gc_add_object(LispValue* val);
 void gc_remove_object(LispValue* val);
+void gc_push_root(LispValue* val);
+void gc_pop_root(LispValue* val);
 void gc_print_stats(void);
 size_t gc_get_allocated(void);
 size_t gc_get_freed(void);

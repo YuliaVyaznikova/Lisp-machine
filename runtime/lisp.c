@@ -7,16 +7,22 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 
 #define GC_MAX_OBJECTS 100000
+#define GC_MAX_ROOTS 10000
 #define GC_DEBUG 0
 
 typedef struct {
     LispValue* objects[GC_MAX_OBJECTS];
     size_t count;
+    LispValue* roots[GC_MAX_ROOTS];  
+    size_t root_count;
     pthread_mutex_t lock;
+    pthread_mutex_t world_lock;
     pthread_t thread;
     int running;
+    int world_stopped;
     size_t total_allocated;
     size_t total_freed;
 } GCGlobals;
@@ -25,53 +31,148 @@ static GCGlobals gc = {0};
 
 void gc_add_object(LispValue* val) {
     if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
+    pthread_mutex_lock(&gc.world_lock);
     pthread_mutex_lock(&gc.lock);
     if (gc.count < GC_MAX_OBJECTS) {
         gc.objects[gc.count++] = val;
         gc.total_allocated++;
-#if GC_DEBUG
-        printf("[GC] +ALLOC  ptr=%p type=%d refcount=%u total=%zu\n", 
-               (void*)val, val->type, val->refcount, gc.count);
-#endif
     }
     pthread_mutex_unlock(&gc.lock);
+    pthread_mutex_unlock(&gc.world_lock);
 }
 
 void gc_remove_object(LispValue* val) {
     if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
+    pthread_mutex_lock(&gc.world_lock);
     pthread_mutex_lock(&gc.lock);
     for (size_t i = 0; i < gc.count; i++) {
         if (gc.objects[i] == val) {
             gc.objects[i] = gc.objects[--gc.count];
             gc.total_freed++;
-#if GC_DEBUG
-            printf("[GC] -REMOVE ptr=%p type=%d remaining=%zu\n", 
-                   (void*)val, val->type, gc.count);
-#endif
+            break;
+        }
+    }
+    pthread_mutex_unlock(&gc.lock);
+    pthread_mutex_unlock(&gc.world_lock);
+}
+
+static void gc_stop_world(void) {
+    pthread_mutex_lock(&gc.world_lock);
+    gc.world_stopped = 1;
+}
+
+static void gc_resume_world(void) {
+    gc.world_stopped = 0;
+    pthread_mutex_unlock(&gc.world_lock);
+}
+
+void gc_push_root(LispValue* val) {
+    if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
+    pthread_mutex_lock(&gc.lock);
+    if (gc.root_count < GC_MAX_ROOTS) {
+        gc.roots[gc.root_count++] = val;
+    }
+    pthread_mutex_unlock(&gc.lock);
+}
+
+void gc_pop_root(LispValue* val) {
+    if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
+    pthread_mutex_lock(&gc.lock);
+    for (size_t i = gc.root_count; i > 0; i--) {
+        if (gc.roots[i-1] == val) {
+            gc.roots[i-1] = gc.roots[--gc.root_count];
             break;
         }
     }
     pthread_mutex_unlock(&gc.lock);
 }
 
-static void gc_mark(LispValue* val, int* marked) {
+static void gc_decrement_all(void) {
+    for (size_t i = 0; i < gc.count; i++) {
+        LispValue* val = gc.objects[i];
+        switch (val->type) {
+            case LISP_PAIR:
+                if (val->data.pair.car && val->data.pair.car != LISP_TRUE && val->data.pair.car != LISP_FALSE) {
+                    atomic_fetch_sub(&val->data.pair.car->refcount, 1);
+                }
+                if (val->data.pair.cdr && val->data.pair.cdr != LISP_TRUE && val->data.pair.cdr != LISP_FALSE) {
+                    atomic_fetch_sub(&val->data.pair.cdr->refcount, 1);
+                }
+                break;
+            case LISP_CLOSURE:
+                if (val->data.closure.env) {
+                    atomic_fetch_sub(&val->data.closure.env->refcount, 1);
+                }
+                break;
+            case LISP_BINDING:
+                if (val->data.binding.value && val->data.binding.value != LISP_TRUE && val->data.binding.value != LISP_FALSE) {
+                    atomic_fetch_sub(&val->data.binding.value->refcount, 1);
+                }
+                if (val->data.binding.parent) {
+                    atomic_fetch_sub(&val->data.binding.parent->refcount, 1);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+static void gc_mark_reachable(LispValue* val) {
     if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
-    if (val->refcount > 0x80000000) return;
+    if (val->refcount & 0x80000000) return;
     
     val->refcount |= 0x80000000;
-    (*marked)++;
     
     switch (val->type) {
         case LISP_PAIR:
-            gc_mark(val->data.pair.car, marked);
-            gc_mark(val->data.pair.cdr, marked);
+            gc_mark_reachable(val->data.pair.car);
+            gc_mark_reachable(val->data.pair.cdr);
             break;
         case LISP_CLOSURE:
-            gc_mark(val->data.closure.env, marked);
+            gc_mark_reachable(val->data.closure.env);
             break;
         case LISP_BINDING:
-            gc_mark(val->data.binding.value, marked);
-            gc_mark(val->data.binding.parent, marked);
+            gc_mark_reachable(val->data.binding.value);
+            gc_mark_reachable(val->data.binding.parent);
+            break;
+        default:
+            break;
+    }
+}
+
+static void gc_restore_refs(LispValue* val) {
+    if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
+    if (!(val->refcount & 0x80000000)) return;
+    
+    val->refcount &= 0x7FFFFFFF;
+    
+    switch (val->type) {
+        case LISP_PAIR:
+            if (val->data.pair.car && val->data.pair.car != LISP_TRUE && val->data.pair.car != LISP_FALSE) {
+                atomic_fetch_add(&val->data.pair.car->refcount, 1);
+            }
+            if (val->data.pair.cdr && val->data.pair.cdr != LISP_TRUE && val->data.pair.cdr != LISP_FALSE) {
+                atomic_fetch_add(&val->data.pair.cdr->refcount, 1);
+            }
+            gc_restore_refs(val->data.pair.car);
+            gc_restore_refs(val->data.pair.cdr);
+            break;
+        case LISP_CLOSURE:
+            if (val->data.closure.env) {
+                atomic_fetch_add(&val->data.closure.env->refcount, 1);
+            }
+            gc_restore_refs(val->data.closure.env);
+            break;
+        case LISP_BINDING:
+            if (val->data.binding.value && val->data.binding.value != LISP_TRUE && val->data.binding.value != LISP_FALSE) {
+                atomic_fetch_add(&val->data.binding.value->refcount, 1);
+            }
+            if (val->data.binding.parent) {
+                atomic_fetch_add(&val->data.binding.parent->refcount, 1);
+            }
+            gc_restore_refs(val->data.binding.value);
+            gc_restore_refs(val->data.binding.parent);
             break;
         default:
             break;
@@ -79,12 +180,12 @@ static void gc_mark(LispValue* val, int* marked) {
 }
 
 static void gc_sweep(void) {
-    pthread_mutex_lock(&gc.lock);
     for (size_t i = 0; i < gc.count; ) {
         LispValue* val = gc.objects[i];
         
         if (val->refcount & 0x80000000) {
-            val->refcount &= 0x7FFFFFFF;
+            i++;
+        } else if ((val->refcount & 0x7FFFFFFF) > 0) {
             i++;
         } else {
             gc.objects[i] = gc.objects[--gc.count];
@@ -106,28 +207,34 @@ static void gc_sweep(void) {
             free(val);
         }
     }
-    pthread_mutex_unlock(&gc.lock);
 }
 
 void gc_collect_cycles(void) {
+    gc_stop_world();
     pthread_mutex_lock(&gc.lock);
-    for (size_t i = 0; i < gc.count; i++) {
-        gc.objects[i]->refcount &= 0x7FFFFFFF;
-    }
-    pthread_mutex_unlock(&gc.lock);
     
-    int marked = 0;
-    pthread_mutex_lock(&gc.lock);
-    for (size_t i = 0; i < gc.count; i++) {
-        LispValue* val = gc.objects[i];
-        if ((val->refcount & 0x7FFFFFFF) > 0) {
-            val->refcount &= 0x7FFFFFFF;
-            gc_mark(val, &marked);
-        }
+#if GC_DEBUG
+    printf("[GC] Starting cycle collection, objects=%zu, roots=%zu\n", gc.count, gc.root_count);
+#endif
+    
+    gc_decrement_all();
+    
+    for (size_t i = 0; i < gc.root_count; i++) {
+        gc_mark_reachable(gc.roots[i]);
     }
-    pthread_mutex_unlock(&gc.lock);
+    
+    for (size_t i = 0; i < gc.root_count; i++) {
+        gc_restore_refs(gc.roots[i]);
+    }
     
     gc_sweep();
+    
+#if GC_DEBUG
+    printf("[GC] Collection complete, remaining=%zu\n", gc.count);
+#endif
+    
+    pthread_mutex_unlock(&gc.lock);
+    gc_resume_world();
 }
 
 static void* gc_thread_func(void* arg) {
@@ -143,10 +250,13 @@ static void* gc_thread_func(void* arg) {
 
 void gc_init(void) {
     gc.count = 0;
+    gc.root_count = 0;
     gc.running = 1;
+    gc.world_stopped = 0;
     gc.total_allocated = 0;
     gc.total_freed = 0;
     pthread_mutex_init(&gc.lock, NULL);
+    pthread_mutex_init(&gc.world_lock, NULL);
     pthread_create(&gc.thread, NULL, gc_thread_func, NULL);
 }
 
@@ -154,6 +264,7 @@ void gc_shutdown(void) {
     gc.running = 0;
     pthread_join(gc.thread, NULL);
     pthread_mutex_destroy(&gc.lock);
+    pthread_mutex_destroy(&gc.world_lock);
     
     for (size_t i = 0; i < gc.count; i++) {
         LispValue* val = gc.objects[i];
@@ -382,16 +493,32 @@ LispValue* lisp_is_nil_fn(LispValue* val) {
 
 void lisp_retain(LispValue* val) {
     if (val && val != LISP_TRUE && val != LISP_FALSE) {
-        val->refcount++;
+        atomic_fetch_add(&val->refcount, 1);
     }
 }
 
 void lisp_release(LispValue* val) {
     if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
-    if (--val->refcount > 0) return;
     
-    gc_remove_object(val);
+    // Atomic decrement, check if we should free
+    uint32_t old_count = atomic_fetch_sub(&val->refcount, 1);
+    if (old_count > 1) return;  // Still has references
     
+    // refcount is now 0, safe to free (no race possible)
+    // Remove from GC registry first
+    pthread_mutex_lock(&gc.world_lock);
+    pthread_mutex_lock(&gc.lock);
+    for (size_t i = 0; i < gc.count; i++) {
+        if (gc.objects[i] == val) {
+            gc.objects[i] = gc.objects[--gc.count];
+            gc.total_freed++;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&gc.lock);
+    pthread_mutex_unlock(&gc.world_lock);
+    
+    // Free children (they may have other references)
     switch (val->type) {
         case LISP_STRING:
             free(val->data.string_val);
