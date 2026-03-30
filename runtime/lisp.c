@@ -191,12 +191,24 @@ static void gc_sweep(void) {
             gc.objects[i] = gc.objects[--gc.count];
             gc.total_freed++;
             
+#if GC_DEBUG
+            printf("[GC] Freed object ptr=%p type=%d\n", (void*)val, val->type);
+#endif
+            
             switch (val->type) {
                 case LISP_STRING:
                     free(val->data.string_val);
                     break;
                 case LISP_SYMBOL:
                     free(val->data.symbol_name);
+                    break;
+                case LISP_PAIR:
+                    if (val->data.pair.car) {
+                        atomic_fetch_sub(&val->data.pair.car->refcount, 1);
+                    }
+                    if (val->data.pair.cdr) {
+                        atomic_fetch_sub(&val->data.pair.cdr->refcount, 1);
+                    }
                     break;
                 case LISP_BINDING:
                     free(val->data.binding.name);
@@ -217,17 +229,26 @@ void gc_collect_cycles(void) {
     printf("[GC] Starting cycle collection, objects=%zu, roots=%zu\n", gc.count, gc.root_count);
 #endif
     
-    gc_decrement_all();
-    
-    for (size_t i = 0; i < gc.root_count; i++) {
-        gc_mark_reachable(gc.roots[i]);
-    }
-    
-    for (size_t i = 0; i < gc.root_count; i++) {
-        gc_restore_refs(gc.roots[i]);
-    }
-    
-    gc_sweep();
+    size_t freed_this_pass;
+    do {
+        for (size_t i = 0; i < gc.count; i++) {
+            gc.objects[i]->refcount &= 0x7FFFFFFF;
+        }
+        
+        gc_decrement_all();
+        
+        for (size_t i = 0; i < gc.root_count; i++) {
+            gc_mark_reachable(gc.roots[i]);
+        }
+        
+        for (size_t i = 0; i < gc.root_count; i++) {
+            gc_restore_refs(gc.roots[i]);
+        }
+        
+        size_t before = gc.count;
+        gc_sweep();
+        freed_this_pass = before - gc.count;
+    } while (freed_this_pass > 0);
     
 #if GC_DEBUG
     printf("[GC] Collection complete, remaining=%zu\n", gc.count);
@@ -330,8 +351,6 @@ LispValue* lisp_cons(LispValue* car, LispValue* cdr) {
     LispValue* val = alloc_value(LISP_PAIR);
     val->data.pair.car = car;
     val->data.pair.cdr = cdr;
-    if (car) lisp_retain(car);
-    if (cdr) lisp_retain(cdr);
     return val;
 }
 
@@ -768,6 +787,16 @@ LispValue* lisp_set_cdr_wrapper(LispValue* __args, LispValue* __env) {
 
 LispValue* lisp_gc_collect_wrapper(LispValue* __args, LispValue* __env) {
     gc_collect_cycles();
+    return LISP_NIL;
+}
+
+LispValue* lisp_gc_push_root_wrapper(LispValue* __args, LispValue* __env) {
+    gc_push_root(lisp_list_get(__args, 0));
+    return LISP_NIL;
+}
+
+LispValue* lisp_gc_pop_root_wrapper(LispValue* __args, LispValue* __env) {
+    gc_pop_root(lisp_list_get(__args, 0));
     return LISP_NIL;
 }
 

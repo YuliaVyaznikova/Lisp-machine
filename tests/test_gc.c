@@ -96,6 +96,45 @@ int main() {
     gc_print_stats();
     printf("PASS: No crash during cycle collection\n");
     
+    printf("\n--- Test 7: Simple cycle (A <-> B) ---\n");
+    LispValue* int1 = lisp_make_int(1);
+    LispValue* int2 = lisp_make_int(2);
+    LispValue* cycle_a = lisp_cons(int1, NULL);
+    LispValue* cycle_b = lisp_cons(int2, NULL);
+    
+    cycle_a->data.pair.cdr = cycle_b;
+    cycle_b->data.pair.cdr = cycle_a;
+    
+    lisp_retain(cycle_a);
+    lisp_retain(cycle_b);
+    
+    printf("Created cycle: A -> B -> A\n");
+    printf("  cycle_a refcount=%u, cycle_b refcount=%u\n", cycle_a->refcount, cycle_b->refcount);
+    printf("  int1 refcount=%u, int2 refcount=%u\n", int1->refcount, int2->refcount);
+    printf("  Objects: %zu\n", gc_get_alive());
+    gc_print_stats();
+    
+    gc_push_root(cycle_a);
+    
+    lisp_release(cycle_a);
+    lisp_release(cycle_b);
+    printf("Released external references\n");
+    
+    gc_pop_root(cycle_a);
+    printf("Removed from GC roots\n");
+    
+    size_t before = gc_get_alive();
+    gc_collect_cycles();
+    size_t after = gc_get_alive();
+    printf("Before GC: %zu, After GC: %zu\n", before, after);
+    gc_print_stats();
+    
+    if (after == 0) {
+        printf("PASS: GC collected all objects including cycle\n");
+    } else {
+        printf("WARN: %zu objects remain\n", after);
+    }
+    
     printf("\n--- Final leak check ---\n");
     printf("Allocated: %zu\n", gc_get_allocated());
     printf("Freed:     %zu\n", gc_get_freed());

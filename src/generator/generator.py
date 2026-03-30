@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 from src.parser.ast_nodes import *
 
 class CodeGenerator:
-    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop'}
+    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop', 'gc-push-root', 'gc-pop-root'}
     
     def __init__(self):
         self.indent = 0
@@ -137,6 +137,7 @@ class CodeGenerator:
         self.func_names = set()
         self.local_vars = set()
         self.func_counter = 0
+        self.dropped_vars = set()
         
         self._collect_defines(nodes)
         
@@ -151,6 +152,7 @@ class CodeGenerator:
     
     def _header(self) -> str:
         return """#include <stdio.h>
+#include "../runtime/lisp.h"
 
 /* GC initialization is done in main() */"""
     
@@ -317,7 +319,8 @@ class CodeGenerator:
         lines.append("")
         lines.append("    /* Cleanup: release all variables */")
         for var in reversed(all_vars):
-            lines.append(f"    lisp_release({var});")
+            if var not in self.dropped_vars:
+                lines.append(f"    lisp_release({var});")
         
         lines.append("    gc_shutdown();")
         lines.append("    return 0;")
@@ -465,7 +468,15 @@ class CodeGenerator:
                     return "gc_collect_cycles()"
                 case "gc-stats":
                     return "gc_print_stats()"
+                case "gc-push-root":
+                    return f"gc_push_root({self._gen_expr(args[0])})"
+                case "gc-pop-root":
+                    return f"gc_pop_root({self._gen_expr(args[0])})"
                 case "drop":
+                    arg = args[0]
+                    if isinstance(arg, SymbolNode):
+                        var_name = self._mangle_name(arg.name)
+                        self.dropped_vars.add(var_name)
                     return f"lisp_release({self._gen_expr(args[0])})"
                 case "apply":
                     func_expr = self._gen_expr(args[0])
