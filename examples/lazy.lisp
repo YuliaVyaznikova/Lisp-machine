@@ -21,7 +21,12 @@
       nil
       (if (nil? s)
           nil
-          (cons (lazy-first s) (take (- n 1) (lazy-rest s))))))
+          (lazy-cons (lazy-first s) (take (- n 1) (lazy-rest s))))))
+
+(define (force-list s)
+  (if (nil? s)
+      nil
+      (cons (lazy-first s) (force-list (lazy-rest s)))))
 
 (define (integers-from n)
   (lazy-cons n (integers-from (+ n 1))))
@@ -33,4 +38,4 @@
 (define evens (lazy-filter even? ints))
 (define squares-of-evens (lazy-map square evens))
 
-(print (take 5 squares-of-evens))
+(print (force-list (take 5 squares-of-evens)))
