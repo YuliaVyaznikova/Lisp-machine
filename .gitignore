@@ -5,3 +5,4 @@ build/
 *.a
 .clangd/
 compile_commands.json
+patch.py

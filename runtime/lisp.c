@@ -755,3 +755,34 @@ LispValue* lisp_print_wrapper(LispValue* __args, LispValue* __env) {
     lisp_print(lisp_list_get(__args, 0));
     return NULL;
 }
+
+// --- Новые функции для GC и циклов ---
+
+LispValue* lisp_set_cdr(LispValue* pair, LispValue* value) {
+    if (!pair || pair->type != LISP_PAIR) return NULL;
+    LispValue* old = pair->data.pair.cdr;
+    pair->data.pair.cdr = value;
+    
+    if (value) lisp_retain(value);
+    if (old) lisp_release(old); // Очищаем старую ссылку, если она была
+    return pair;
+}
+
+LispValue* lisp_set_cdr_wrapper(LispValue* __args, LispValue* __env) {
+    return lisp_set_cdr(lisp_list_get(__args, 0), lisp_list_get(__args, 1));
+}
+
+LispValue* lisp_gc_collect_wrapper(LispValue* __args, LispValue* __env) {
+    gc_collect_cycles();
+    return LISP_NIL;
+}
+
+LispValue* lisp_gc_stats_wrapper(LispValue* __args, LispValue* __env) {
+    gc_print_stats();
+    return LISP_NIL;
+}
+
+LispValue* lisp_drop_wrapper(LispValue* __args, LispValue* __env) {
+    lisp_release(lisp_list_get(__args, 0));
+    return LISP_NIL;
+}

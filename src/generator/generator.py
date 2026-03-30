@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from parser.ast_nodes import *
 
 class CodeGenerator:
-    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false'}
+    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop'}
     
     def __init__(self):
         self.indent = 0
@@ -30,6 +30,10 @@ class CodeGenerator:
             'rest': 'lisp_rest_wrapper',
             'cons': 'lisp_cons_wrapper',
             'print': 'lisp_print_wrapper',
+            'set-cdr!': 'lisp_set_cdr_wrapper',
+            'gc-collect': 'lisp_gc_collect_wrapper',
+            'gc-stats': 'lisp_gc_stats_wrapper',
+            'drop': 'lisp_drop_wrapper',
         }
     
     def _mangle_name(self, name: str) -> str:
@@ -150,8 +154,6 @@ class CodeGenerator:
     
     def _header(self) -> str:
         return """#include <stdio.h>
-#include <stdlib.h>
-#include "runtime/lisp.h"
 
 /* GC initialization is done in main() */"""
     
@@ -460,6 +462,14 @@ class CodeGenerator:
                     return f"lisp_is_nil_fn({self._gen_expr(args[0])})"
                 case "print":
                     return f"lisp_print({self._gen_expr(args[0])})"
+                case "set-cdr!":
+                    return f"lisp_set_cdr({self._gen_expr(args[0])}, {self._gen_expr(args[1])})"
+                case "gc-collect":
+                    return "gc_collect_cycles()"
+                case "gc-stats":
+                    return "gc_print_stats()"
+                case "drop":
+                    return f"lisp_release({self._gen_expr(args[0])})"
                 case "apply":
                     func_expr = self._gen_expr(args[0])
                     args_expr = self._gen_expr(args[1])
@@ -476,12 +486,10 @@ class CodeGenerator:
                         args_list = self._build_args_list(args)
                         return f"lisp_call_closure({self._mangle_name(func.name)}, {args_list})"
                     
-                    # Если функция нигде не найдена, вычисляем её как выражение и вызываем замыкание
                     func_expr = self._gen_expr(func)
                     args_list = self._build_args_list(args)
                     return f"lisp_call_closure({func_expr}, {args_list})"
         
-        # Fallback для произвольного выражения возвращающего функцию
         func_expr = self._gen_expr(func)
         args_list = self._build_args_list(args)
         return f"lisp_call_closure({func_expr}, {args_list})"

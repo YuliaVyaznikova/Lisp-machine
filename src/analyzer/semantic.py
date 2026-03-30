@@ -30,7 +30,8 @@ class SymbolTable:
         return self.lookup(name) is not None
 
 class SemanticAnalyzer:
-    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'apply', 'while', 'set!', 'length', 'append', 'reverse', 'not', 'mod', 'abs', 'min', 'max', 'nil?', 'defmacro', 'quasiquote', 'unquote', 'unquote-splicing'}
+    # Добавили set-cdr!, gc-collect, gc-stats, drop в список встроенных команд
+    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'apply', 'while', 'set!', 'length', 'append', 'reverse', 'not', 'mod', 'abs', 'min', 'max', 'nil?', 'defmacro', 'quasiquote', 'unquote', 'unquote-splicing', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop'}
     
     def __init__(self):
         self.global_table = SymbolTable()

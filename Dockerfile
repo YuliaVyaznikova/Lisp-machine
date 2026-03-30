@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 gcc:latest
+FROM gcc:latest
 
 WORKDIR /app
 
