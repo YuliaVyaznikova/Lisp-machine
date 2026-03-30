@@ -1,5 +1,3 @@
-;; predicates
-
 (define (zero? x) (= x 0))
 
 (define (positive? x) (> x 0))
@@ -10,8 +8,6 @@
 
 (define (odd? x) (not (even? x)))
 
-;; arithmetic
-
 (define (inc x) (+ x 1))
 
 (define (dec x) (- x 1))
@@ -19,8 +15,6 @@
 (define (square x) (* x x))
 
 (define (cube x) (* x x x))
-
-;; list operations
 
 (define (length lst)
   (if (nil? lst)
@@ -54,8 +48,6 @@
           lst
           (member x (rest lst)))))
 
-;; higher-order functions
-
 (define (map f lst)
   (if (nil? lst)
       nil
@@ -87,8 +79,6 @@
           (all? pred (rest lst))
           nil)))
 
-;; utility macros
-
 (defmacro when (condition body)
   `(if ,condition ,body nil))
 
@@ -97,8 +87,6 @@
 
 (defmacro let (var value body)
   `((lambda (,var) ,body) ,value))
-
-;; convenience functions
 
 (define (identity x) x)
 

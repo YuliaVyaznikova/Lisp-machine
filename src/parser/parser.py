@@ -82,14 +82,25 @@ class DefmacroHandler(SpecialFormHandler):
             raise ParseError("defmacro requires name as symbol", start)
         
         params_node = elements[2]
+        params = []
+        rest_param = None
+        
         if isinstance(params_node, NilNode):
-            params = []
+            pass
         elif isinstance(params_node, ListNode):
-            params = [p.name for p in params_node.elements if isinstance(p, SymbolNode)]
+            param_elements = params_node.elements
+            for i, p in enumerate(param_elements):
+                if isinstance(p, SymbolNode):
+                    if p.name == "&rest":
+                        if i + 1 < len(param_elements) and isinstance(param_elements[i + 1], SymbolNode):
+                            rest_param = param_elements[i + 1].name
+                            break
+                    else:
+                        params.append(p.name)
         else:
             raise ParseError("defmacro requires params as list", start)
             
-        return DefmacroNode(name=name_node.name, params=params, body=elements[3])
+        return DefmacroNode(name=name_node.name, params=params, rest_param=rest_param, body=elements[3])
 
 class Parser:
     def __init__(self, tokens: list):
@@ -190,7 +201,6 @@ class Parser:
         if not elements:
             return NilNode()
         
-        # Если мы не в квазицитате, обрабатываем формы вроде lambda/if штатно
         if self.quasiquote_depth == 0 and isinstance(elements[0], SymbolNode):
             name = elements[0].name
             for handler in self.handlers:

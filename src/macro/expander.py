@@ -1,8 +1,5 @@
 from typing import List, Dict
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from parser.ast_nodes import *
+from src.parser.ast_nodes import *
 
 class MacroExpander:
     def __init__(self):
@@ -22,8 +19,6 @@ class MacroExpander:
             expanded_elements = [self.expand(e) for e in node.elements]
             first_exp = expanded_elements[0]
             
-            # После макроподстановок мы "просыпаемся" и снова конвертируем 
-            # обычные списки в формы IfNode/LambdaNode, если необходимо.
             if isinstance(first_exp, SymbolNode):
                 name = first_exp.name
                 if name == "if" and len(expanded_elements) >= 3:
@@ -78,29 +73,68 @@ class MacroExpander:
         
         return node
     
-    def _eval_compile_time(self, node: ASTNode) -> ASTNode:
+    def _eval_compile_time(self, node: ASTNode, bindings: Dict[str, ASTNode] = None) -> ASTNode:
+        if bindings is None:
+            bindings = {}
+        
+        if isinstance(node, SymbolNode):
+            if node.name in bindings:
+                return bindings[node.name]
+            return node
+        
+        if isinstance(node, IfNode):
+            cond = self._eval_compile_time(node.condition, bindings)
+            if isinstance(cond, SymbolNode) and cond.name == "true":
+                return self._eval_compile_time(node.then_branch, bindings)
+            if isinstance(cond, SymbolNode) and cond.name == "false":
+                return self._eval_compile_time(node.else_branch, bindings)
+            return IfNode(
+                condition=cond,
+                then_branch=self._eval_compile_time(node.then_branch, bindings),
+                else_branch=self._eval_compile_time(node.else_branch, bindings)
+            )
+        
         if isinstance(node, ListNode) and node.elements:
             first = node.elements[0]
             if isinstance(first, SymbolNode):
+                if first.name == "if" and len(node.elements) >= 3:
+                    cond = self._eval_compile_time(node.elements[1], bindings)
+                    if isinstance(cond, SymbolNode) and cond.name == "true":
+                        return self._eval_compile_time(node.elements[2], bindings)
+                    if isinstance(cond, SymbolNode) and cond.name == "false":
+                        if len(node.elements) > 3:
+                            return self._eval_compile_time(node.elements[3], bindings)
+                        return NilNode()
+                    return ListNode(elements=[node.elements[0], cond, node.elements[2], node.elements[3] if len(node.elements) > 3 else NilNode()])
+                if first.name == "nil?" and len(node.elements) == 2:
+                    arg = self._eval_compile_time(node.elements[1], bindings)
+                    if isinstance(arg, NilNode) or (isinstance(arg, ListNode) and not arg.elements):
+                        return SymbolNode(name="true")
+                    return SymbolNode(name="false")
                 if first.name == "first" and len(node.elements) == 2:
-                    arg = self._eval_compile_time(node.elements[1])
+                    arg = self._eval_compile_time(node.elements[1], bindings)
                     if isinstance(arg, ListNode) and arg.elements:
                         return arg.elements[0]
                     if isinstance(arg, QuoteNode) and isinstance(arg.value, ListNode) and arg.value.elements:
                         return QuoteNode(value=arg.value.elements[0])
+                    return NilNode()
                 if first.name == "rest" and len(node.elements) == 2:
-                    arg = self._eval_compile_time(node.elements[1])
+                    arg = self._eval_compile_time(node.elements[1], bindings)
                     if isinstance(arg, ListNode) and arg.elements:
                         return ListNode(elements=arg.elements[1:])
                     if isinstance(arg, QuoteNode) and isinstance(arg.value, ListNode) and arg.value.elements:
                         return QuoteNode(value=ListNode(elements=arg.value.elements[1:]))
+                    return NilNode()
+            return ListNode(elements=[self._eval_compile_time(e, bindings) for e in node.elements])
         
         if isinstance(node, ListNode):
-            return ListNode(elements=[self._eval_compile_time(e) for e in node.elements])
+            return ListNode(elements=[self._eval_compile_time(e, bindings) for e in node.elements])
         if isinstance(node, UnquoteNode):
-            return UnquoteNode(value=self._eval_compile_time(node.value))
+            return UnquoteNode(value=self._eval_compile_time(node.value, bindings))
+        if isinstance(node, UnquoteSplicingNode):
+            return UnquoteSplicingNode(value=self._eval_compile_time(node.value, bindings))
         if isinstance(node, QuoteNode):
-            return QuoteNode(value=self._eval_compile_time(node.value))
+            return QuoteNode(value=self._eval_compile_time(node.value, bindings))
         return node
 
     def _expand_macro(self, name: str, args: List[ASTNode]) -> ASTNode:
@@ -110,8 +144,12 @@ class MacroExpander:
             if i < len(args):
                 bindings[param] = args[i]
         
+        if macro.rest_param:
+            rest_args = args[len(macro.params):]
+            bindings[macro.rest_param] = ListNode(elements=rest_args) if rest_args else NilNode()
+        
         expanded = self._substitute(macro.body, bindings)
-        expanded = self._eval_compile_time(expanded)
+        expanded = self._eval_compile_time(expanded, bindings)
         
         if isinstance(expanded, QuoteNode):
             expanded = expanded.value
@@ -124,17 +162,28 @@ class MacroExpander:
             return node
         
         if isinstance(node, ListNode):
-            return ListNode(elements=[self._substitute(e, bindings) for e in node.elements])
+            new_elements = []
+            for e in node.elements:
+                if isinstance(e, UnquoteSplicingNode):
+                    spliced = self._substitute(e.value, bindings)
+                    if isinstance(spliced, ListNode):
+                        new_elements.extend(spliced.elements)
+                    elif not isinstance(spliced, NilNode):
+                        new_elements.append(spliced)
+                else:
+                    new_elements.append(self._substitute(e, bindings))
+            return ListNode(elements=new_elements)
         
         if isinstance(node, QuoteNode):
             subbed = self._substitute(node.value, bindings)
             return QuoteNode(value=subbed)
         
         if isinstance(node, UnquoteNode):
-            return self._substitute(node.value, bindings)
+            subbed = self._substitute(node.value, bindings)
+            return self._eval_compile_time(subbed, bindings)
         
         if isinstance(node, UnquoteSplicingNode):
-            return node
+            return self._substitute(node.value, bindings)
         
         if isinstance(node, IfNode):
             return IfNode(

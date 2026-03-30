@@ -77,6 +77,7 @@ class LambdaNode(ASTNode):
 class DefmacroNode(ASTNode):
     name: str = ""
     params: List[str] = None
+    rest_param: str = None
     body: ASTNode = None
     def __post_init__(self):
         if self.params is None:

@@ -1,6 +1,3 @@
-; tail call optimization examples
-
-; factorial with accumulator
 (define (factorial-acc n acc)
   (if (= n 0)
       acc
@@ -12,7 +9,6 @@
 (print (factorial 5))
 (print (factorial 10))
 
-; sum from 1 to n
 (define (sum-to-acc n acc)
   (if (= n 0)
       acc
@@ -23,7 +19,6 @@
 
 (print (sum-to 100))
 
-; fibonacci
 (define (fib-acc n a b)
   (if (= n 0)
       a

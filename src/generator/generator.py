@@ -1,8 +1,5 @@
 from typing import List, Optional, Tuple
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from parser.ast_nodes import *
+from src.parser.ast_nodes import *
 
 class CodeGenerator:
     BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop'}

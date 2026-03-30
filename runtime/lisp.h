@@ -111,7 +111,6 @@ LispValue* lisp_rest_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lisp_cons_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lisp_print_wrapper(LispValue* __args, LispValue* __env);
 
-// --- Новые функции для GC и циклов ---
 LispValue* lisp_set_cdr(LispValue* pair, LispValue* value);
 LispValue* lisp_set_cdr_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lisp_gc_collect_wrapper(LispValue* __args, LispValue* __env);

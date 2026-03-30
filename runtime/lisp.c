@@ -500,12 +500,9 @@ void lisp_retain(LispValue* val) {
 void lisp_release(LispValue* val) {
     if (!val || val == LISP_TRUE || val == LISP_FALSE) return;
     
-    // Atomic decrement, check if we should free
     uint32_t old_count = atomic_fetch_sub(&val->refcount, 1);
-    if (old_count > 1) return;  // Still has references
+    if (old_count > 1) return;
     
-    // refcount is now 0, safe to free (no race possible)
-    // Remove from GC registry first
     pthread_mutex_lock(&gc.world_lock);
     pthread_mutex_lock(&gc.lock);
     for (size_t i = 0; i < gc.count; i++) {
@@ -518,7 +515,6 @@ void lisp_release(LispValue* val) {
     pthread_mutex_unlock(&gc.lock);
     pthread_mutex_unlock(&gc.world_lock);
     
-    // Free children (they may have other references)
     switch (val->type) {
         case LISP_STRING:
             free(val->data.string_val);
@@ -756,15 +752,13 @@ LispValue* lisp_print_wrapper(LispValue* __args, LispValue* __env) {
     return NULL;
 }
 
-// --- Новые функции для GC и циклов ---
-
 LispValue* lisp_set_cdr(LispValue* pair, LispValue* value) {
     if (!pair || pair->type != LISP_PAIR) return NULL;
     LispValue* old = pair->data.pair.cdr;
     pair->data.pair.cdr = value;
     
     if (value) lisp_retain(value);
-    if (old) lisp_release(old); // Очищаем старую ссылку, если она была
+    if (old) lisp_release(old);
     return pair;
 }
 

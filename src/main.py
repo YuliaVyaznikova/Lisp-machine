@@ -2,12 +2,12 @@ import sys
 import argparse
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from parser import parse
-from generator import CodeGenerator
-from analyzer import SemanticAnalyzer
-from macro import expand_macros
+from src.parser import parse
+from src.generator import CodeGenerator
+from src.analyzer import SemanticAnalyzer
+from src.macro import expand_macros
 
 def compile_file(input_path: str, output_path: str):
     with open(input_path, 'r', encoding='utf-8') as f:
