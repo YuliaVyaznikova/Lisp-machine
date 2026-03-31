@@ -809,3 +809,77 @@ LispValue* lisp_drop_wrapper(LispValue* __args, LispValue* __env) {
     lisp_release(lisp_list_get(__args, 0));
     return LISP_NIL;
 }
+
+void lisp_princ(LispValue* val) {
+    if (!val) {
+        printf("nil");
+        return;
+    }
+    if (val == LISP_TRUE) {
+        printf("true");
+        return;
+    }
+    if (val == LISP_FALSE) {
+        printf("false");
+        return;
+    }
+    switch (val->type) {
+        case LISP_NIL:
+            printf("nil");
+            break;
+        case LISP_INT:
+            printf("%ld", val->data.int_val);
+            break;
+        case LISP_FLOAT:
+            printf("%g", val->data.float_val);
+            break;
+        case LISP_STRING:
+            printf("%s", val->data.string_val);
+            break;
+        case LISP_SYMBOL:
+            printf("%s", val->data.symbol_name);
+            break;
+        case LISP_PAIR:
+            lisp_princ(val->data.pair.car);
+            LispValue* curr = val->data.pair.cdr;
+            while (curr && curr->type == LISP_PAIR) {
+                printf(" ");
+                lisp_princ(curr->data.pair.car);
+                curr = curr->data.pair.cdr;
+            }
+            break;
+        default:
+            printf("#<unknown>");
+    }
+}
+
+LispValue* lisp_princ_wrapper(LispValue* __args, LispValue* __env) {
+    lisp_princ(lisp_list_get(__args, 0));
+    return LISP_NIL;
+}
+
+LispValue* lisp_terpri_wrapper(LispValue* __args, LispValue* __env) {
+    printf("\n");
+    return LISP_NIL;
+}
+
+LispValue* lisp_read_line_wrapper(LispValue* __args, LispValue* __env) {
+    char buffer[4096];
+    if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        return LISP_NIL;
+    }
+    size_t len = strlen(buffer);
+    if (len > 0 && buffer[len - 1] == '\n') {
+        buffer[len - 1] = '\0';
+    }
+    return lisp_make_string(buffer);
+}
+
+LispValue* lisp_read_char_wrapper(LispValue* __args, LispValue* __env) {
+    int c = getchar();
+    if (c == EOF) {
+        return LISP_NIL;
+    }
+    char str[2] = { (char)c, '\0' };
+    return lisp_make_string(str);
+}

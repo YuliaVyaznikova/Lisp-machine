@@ -117,4 +117,10 @@ LispValue* lisp_gc_collect_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lisp_gc_stats_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lisp_drop_wrapper(LispValue* __args, LispValue* __env);
 
+void lisp_princ(LispValue* val);
+LispValue* lisp_princ_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_terpri_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_read_line_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_read_char_wrapper(LispValue* __args, LispValue* __env);
+
 #endif

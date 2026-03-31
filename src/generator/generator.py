@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 from src.parser.ast_nodes import *
 
 class CodeGenerator:
-    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop', 'gc-push-root', 'gc-pop-root'}
+    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop', 'gc-push-root', 'gc-pop-root', 'princ', 'terpri', 'read-line', 'read-char'}
     
     def __init__(self):
         self.indent = 0
@@ -472,6 +472,14 @@ class CodeGenerator:
                     return f"gc_push_root({self._gen_expr(args[0])})"
                 case "gc-pop-root":
                     return f"gc_pop_root({self._gen_expr(args[0])})"
+                case "princ":
+                    return f"lisp_princ({self._gen_expr(args[0])})"
+                case "terpri":
+                    return "lisp_terpri_wrapper(NULL, NULL)"
+                case "read-line":
+                    return "lisp_read_line_wrapper(NULL, NULL)"
+                case "read-char":
+                    return "lisp_read_char_wrapper(NULL, NULL)"
                 case "drop":
                     arg = args[0]
                     if isinstance(arg, SymbolNode):

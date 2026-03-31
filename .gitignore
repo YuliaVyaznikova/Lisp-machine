@@ -6,3 +6,6 @@ build/
 .clangd/
 compile_commands.json
 patch.py
+output/
+*.exe
+output.c
