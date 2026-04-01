@@ -30,12 +30,12 @@ docker run --rm -v ${PWD}:/app -w /app gcc:latest bash -c "
 
 ## Tests
 
-### Run all tests (Lisp examples)
+### Run lisp tests (Lisp examples)
 ```powershell
 docker run --rm -v ${PWD}:/app -w /app gcc:latest bash run_all_tests.sh
 ```
 
-### Run ALL tests (C runtime, GC, Python parser, E2E)
+### Run all tests (C runtime, GC, Python parser, E2E)
 ```powershell
 docker build -t lisp-machine .
 docker run --rm lisp-machine
