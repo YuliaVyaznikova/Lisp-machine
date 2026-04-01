@@ -141,6 +141,7 @@ class CodeGenerator:
         self.func_counter = 0
         self.dropped_vars = set()
         
+        self._collect_function_names(nodes)
         self._collect_defines(nodes)
         
         main_code = self._main(nodes)
@@ -151,6 +152,15 @@ class CodeGenerator:
         parts.append(self._functions())
         parts.append(main_code)
         return "\n\n".join(parts)
+    
+    def _collect_function_names(self, nodes: List[ASTNode]):
+        for node in nodes:
+            if isinstance(node, DefineNode):
+                if (node.params is not None and len(node.params) > 0) or node.rest_param:
+                    mangled = self._mangle_name(node.name)
+                    self.func_names.add(mangled)
+                    if node.rest_param:
+                        self.variadic_funcs.add(mangled)
     
     def _header(self) -> str:
         return """#include <stdio.h>
@@ -188,9 +198,6 @@ class CodeGenerator:
     
     def _gen_function(self, node: DefineNode):
         mangled = self._mangle_name(node.name)
-        self.func_names.add(mangled)
-        if node.rest_param:
-            self.variadic_funcs.add(mangled)
         self.temp_counter = 0
         self.local_vars = set(node.params)
         if node.rest_param:
