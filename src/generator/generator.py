@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 from src.parser.ast_nodes import *
 
 class CodeGenerator:
-    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop', 'gc-push-root', 'gc-pop-root', 'princ', 'terpri', 'read-line', 'read-char'}
+    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop', 'gc-push-root', 'gc-pop-root', 'princ', 'terpri', 'read-line', 'read-char', 'c-emit', 'open', 'close', 'file-read-line', 'file-write-line', 'file-eof'}
     
     def __init__(self):
         self.indent = 0
@@ -368,6 +368,9 @@ class CodeGenerator:
         if isinstance(node, LambdaNode):
             return self._gen_lambda(node)
         
+        if isinstance(node, CemitNode):
+            return f"({node.code})"
+        
         return "NULL"
     
     def _gen_quote(self, node: ASTNode) -> str:
@@ -480,6 +483,16 @@ class CodeGenerator:
                     return "lisp_read_line_wrapper(NULL, NULL)"
                 case "read-char":
                     return "lisp_read_char_wrapper(NULL, NULL)"
+                case "open":
+                    return f"lisp_open_wrapper({self._build_args_list(args)}, NULL)"
+                case "close":
+                    return f"lisp_close_wrapper({self._build_args_list(args)}, NULL)"
+                case "file-read-line":
+                    return f"lisp_file_read_line_wrapper({self._build_args_list(args)}, NULL)"
+                case "file-write-line":
+                    return f"lisp_file_write_line_wrapper({self._build_args_list(args)}, NULL)"
+                case "file-eof":
+                    return f"lisp_file_eof_wrapper({self._build_args_list(args)}, NULL)"
                 case "drop":
                     arg = args[0]
                     if isinstance(arg, SymbolNode):

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 typedef enum {
     LISP_NIL,
@@ -13,7 +14,8 @@ typedef enum {
     LISP_SYMBOL,
     LISP_PAIR,
     LISP_CLOSURE,
-    LISP_BINDING
+    LISP_BINDING,
+    LISP_FILE
 } LispType;
 
 typedef struct LispValue {
@@ -24,6 +26,7 @@ typedef struct LispValue {
         double float_val;
         char* string_val;
         char* symbol_name;
+        FILE* file_val;
         struct {
             struct LispValue* car;
             struct LispValue* cdr;
@@ -122,5 +125,11 @@ LispValue* lisp_princ_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lisp_terpri_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lisp_read_line_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lisp_read_char_wrapper(LispValue* __args, LispValue* __env);
+
+LispValue* lisp_open_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_close_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_file_read_line_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_file_write_line_wrapper(LispValue* __args, LispValue* __env);
+LispValue* lisp_file_eof_wrapper(LispValue* __args, LispValue* __env);
 
 #endif

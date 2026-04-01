@@ -90,3 +90,7 @@ class UnquoteNode(ASTNode):
 @dataclass
 class UnquoteSplicingNode(ASTNode):
     value: ASTNode = None
+
+@dataclass
+class CemitNode(ASTNode):
+    code: str = ""
