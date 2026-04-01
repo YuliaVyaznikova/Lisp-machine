@@ -1,0 +1,8 @@
+"=== &rest parameter test ==="
+"sum-all with &rest:"
+0
+1
+3
+6
+15
+"=== Done ==="

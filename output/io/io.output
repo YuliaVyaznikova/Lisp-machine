@@ -1,0 +1,17 @@
+"=== I/O Test ==="
+"princ - output without quotes:"
+Hello, World!
+Number: 42
+Symbol: foo
+""
+"terpri - newline:"
+Line 1
+Line 2
+""
+"read-line - read a line:"
+Enter your name: Hello, nil
+""
+"read-char - read a character:"
+Enter a char: You entered: nil
+""
+"=== Done ==="

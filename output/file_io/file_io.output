@@ -1,0 +1,9 @@
+"=== File I/O test ==="
+"Writing to file:"
+"File written"
+"Reading from file:"
+"Hello from Lisp!"
+"Line 2"
+"Line 3"
+false
+"=== Done ==="

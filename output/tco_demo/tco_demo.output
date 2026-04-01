@@ -1,0 +1,7 @@
+"=== TCO Demonstration ==="
+""
+"Without TCO, this would overflow the stack:"
+"Counting down from 100000..."
+"done!"
+""
+"=== Done ==="

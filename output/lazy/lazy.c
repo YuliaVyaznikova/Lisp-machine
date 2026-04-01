@@ -1,18 +1,27 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include "runtime/lisp.h"
 
 /* GC initialization is done in main() */
 
 /* Forward declarations */
 LispValue* lazy_first(LispValue* s);
+LispValue* lazy_first_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lazy_rest(LispValue* s);
+LispValue* lazy_rest_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lazy_map(LispValue* f, LispValue* s);
+LispValue* lazy_map_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lazy_filter(LispValue* pred, LispValue* s);
+LispValue* lazy_filter_wrapper(LispValue* __args, LispValue* __env);
 LispValue* take(LispValue* n, LispValue* s);
+LispValue* take_wrapper(LispValue* __args, LispValue* __env);
+LispValue* force_list(LispValue* s);
+LispValue* force_list_wrapper(LispValue* __args, LispValue* __env);
 LispValue* integers_from(LispValue* n);
+LispValue* integers_from_wrapper(LispValue* __args, LispValue* __env);
 LispValue* even_p(LispValue* x);
+LispValue* even_p_wrapper(LispValue* __args, LispValue* __env);
 LispValue* square(LispValue* x);
+LispValue* square_wrapper(LispValue* __args, LispValue* __env);
 
 LispValue* lazy_first(LispValue* s) {
     return lisp_first(s);
@@ -86,6 +95,12 @@ LispValue* lazy_filter_wrapper(LispValue* __args, LispValue* __env) {
     return lazy_filter(pred, s);
 }
 
+LispValue* __lambda_2(LispValue* __args, LispValue* __env) {
+    LispValue* n = lisp_env_lookup(__env, "n");
+    LispValue* s = lisp_env_lookup(__env, "s");
+    return take(lisp_sub(n, lisp_make_int(1)), lazy_rest(s));
+}
+
 LispValue* take(LispValue* n, LispValue* s) {
     LispValue* __result_0 = NULL;
     if (lisp_is_true(lisp_eq(n, lisp_make_int(0)))) {
@@ -95,7 +110,7 @@ LispValue* take(LispValue* n, LispValue* s) {
         if (lisp_is_true(lisp_is_nil_fn(s))) {
             __result_1 = NULL;
         } else {
-            __result_1 = lisp_cons(lazy_first(s), take(lisp_sub(n, lisp_make_int(1)), lazy_rest(s)));
+            __result_1 = lisp_cons(lazy_first(s), lisp_make_closure(__lambda_2, lisp_env_extend(lisp_env_extend(NULL, "n", n), "s", s)));
         }
         __result_0 = __result_1;
     }
@@ -108,13 +123,28 @@ LispValue* take_wrapper(LispValue* __args, LispValue* __env) {
     return take(n, s);
 }
 
-LispValue* __lambda_2(LispValue* __args, LispValue* __env) {
+LispValue* force_list(LispValue* s) {
+    LispValue* __result_0 = NULL;
+    if (lisp_is_true(lisp_is_nil_fn(s))) {
+        __result_0 = NULL;
+    } else {
+        __result_0 = lisp_cons(lazy_first(s), force_list(lazy_rest(s)));
+    }
+    return __result_0;
+}
+
+LispValue* force_list_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* s = lisp_list_get(__args, 0);
+    return force_list(s);
+}
+
+LispValue* __lambda_3(LispValue* __args, LispValue* __env) {
     LispValue* n = lisp_env_lookup(__env, "n");
     return integers_from(lisp_add(n, lisp_make_int(1)));
 }
 
 LispValue* integers_from(LispValue* n) {
-    return lisp_cons(n, lisp_make_closure(__lambda_2, lisp_env_extend(NULL, "n", n)));
+    return lisp_cons(n, lisp_make_closure(__lambda_3, lisp_env_extend(NULL, "n", n)));
 }
 
 LispValue* integers_from_wrapper(LispValue* __args, LispValue* __env) {
@@ -149,7 +179,7 @@ int main(int argc, char** argv) {
     ints = integers_from(lisp_make_int(1));
     evens = lazy_filter(lisp_make_closure(even_p_wrapper, NULL), ints);
     squares_of_evens = lazy_map(lisp_make_closure(square_wrapper, NULL), evens);
-    lisp_print(take(lisp_make_int(5), squares_of_evens));
+    lisp_print(force_list(take(lisp_make_int(5), squares_of_evens)));
 
     /* Cleanup: release all variables */
     lisp_release(squares_of_evens);

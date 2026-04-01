@@ -1,11 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include "runtime/lisp.h"
 
 /* GC initialization is done in main() */
 
 /* Forward declarations */
 LispValue* square(LispValue* x);
+LispValue* square_wrapper(LispValue* __args, LispValue* __env);
 
 LispValue* square(LispValue* x) {
     return lisp_mul(x, x);

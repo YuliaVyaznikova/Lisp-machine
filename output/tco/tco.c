@@ -1,16 +1,21 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include "runtime/lisp.h"
 
 /* GC initialization is done in main() */
 
 /* Forward declarations */
 LispValue* factorial_acc(LispValue* n, LispValue* acc);
+LispValue* factorial_acc_wrapper(LispValue* __args, LispValue* __env);
 LispValue* factorial(LispValue* n);
+LispValue* factorial_wrapper(LispValue* __args, LispValue* __env);
 LispValue* sum_to_acc(LispValue* n, LispValue* acc);
+LispValue* sum_to_acc_wrapper(LispValue* __args, LispValue* __env);
 LispValue* sum_to(LispValue* n);
+LispValue* sum_to_wrapper(LispValue* __args, LispValue* __env);
 LispValue* fib_acc(LispValue* n, LispValue* a, LispValue* b);
+LispValue* fib_acc_wrapper(LispValue* __args, LispValue* __env);
 LispValue* fib(LispValue* n);
+LispValue* fib_wrapper(LispValue* __args, LispValue* __env);
 
 LispValue* factorial_acc(LispValue* n, LispValue* acc) {
     LispValue* __new_n = NULL;

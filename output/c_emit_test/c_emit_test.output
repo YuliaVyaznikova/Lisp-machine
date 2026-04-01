@@ -1,0 +1,8 @@
+"=== c-emit test ==="
+"Calling C printf directly:"
+Hello from C!
+"Calling C math:"
+Square root of 2: 2.000000
+"Lisp value:"
+3
+"=== Done ==="

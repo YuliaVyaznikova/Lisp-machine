@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include "runtime/lisp.h"
 
 /* GC initialization is done in main() */

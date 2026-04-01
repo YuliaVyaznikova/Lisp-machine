@@ -1,0 +1,18 @@
+"=== GC Demonstration ==="
+""
+"1. Reference counting frees trees automatically"
+GC Stats: allocated=3, freed=0, alive=3
+"Tree: ((1.2).(3.4))"
+GC Stats: allocated=11, freed=0, alive=11
+"Dropped root - tree freed recursively:"
+GC Stats: allocated=12, freed=7, alive=5
+""
+"2. Cycles need mark-and-sweep"
+"Self-referential cycle created"
+GC Stats: allocated=17, freed=7, alive=10
+"Dropped - but cycle has internal ref:"
+GC Stats: allocated=18, freed=7, alive=11
+"After mark-and-sweep:"
+GC Stats: allocated=19, freed=9, alive=10
+""
+"=== Done ==="

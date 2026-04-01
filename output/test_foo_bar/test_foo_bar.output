@@ -1,0 +1,14 @@
+"=== Mutual recursion test ==="
+"foo calls bar, bar defined AFTER foo:"
+42
+"Expected: 42"
+""
+"=== even? / odd? mutual recursion ==="
+"even? 10:"
+true
+"odd? 10:"
+false
+"even? 7:"
+false
+"odd? 7:"
+true

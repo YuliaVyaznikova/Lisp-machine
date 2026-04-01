@@ -12,21 +12,44 @@ Lisp-to-C transpiler with minimal C runtime, garbage collection, and tail call o
 - Closures - full lexical scoping support
 - Variadic functions - `&rest` parameter support
 
-## Running tests
+## Usage
 
 ### Prerequisites
 - Docker (with `gcc:latest` image)
 
-### Run all tests
+### Compile and run a Lisp file
 ```powershell
-cd C:\IMPORTANT\NSU\3\lisp-machine
+docker run --rm -v ${PWD}:/app -w /app gcc:latest bash -c "
+  mkdir -p build output/myprogram &&
+  gcc -c runtime/lisp.c -I. -o build/lisp.o &&
+  python3 src/main.py myprogram.lisp -o output/myprogram/myprogram.c &&
+  gcc output/myprogram/myprogram.c build/lisp.o -I. -o output/myprogram/myprogram &&
+  ./output/myprogram/myprogram
+"
+```
+
+## Tests
+
+### Run all tests (Lisp examples)
+```powershell
 docker run --rm -v ${PWD}:/app -w /app gcc:latest bash run_all_tests.sh
+```
+
+### Run ALL tests (C runtime, GC, Python parser, E2E)
+```powershell
+docker build -t lisp-machine .
+docker run --rm lisp-machine
 ```
 
 ### Run single test
 ```powershell
-cd C:\IMPORTANT\NSU\3\lisp-machine
-docker run --rm -v ${PWD}:/app -w /app gcc:latest bash -c "cd Lisp-machine && python3 src/main.py examples/hello.lisp -o output/hello.c && gcc output/hello.c build/lisp.o -I. -o output/hello && ./output/hello"
+docker run --rm -v ${PWD}:/app -w /app gcc:latest bash -c "
+  mkdir -p build output/hello &&
+  gcc -c runtime/lisp.c -I. -o build/lisp.o &&
+  python3 src/main.py examples/hello.lisp -o output/hello/hello.c &&
+  gcc output/hello/hello.c build/lisp.o -I. -o output/hello/hello &&
+  ./output/hello/hello
+"
 ```
 
 ## Language features

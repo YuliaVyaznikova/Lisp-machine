@@ -1,11 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include "runtime/lisp.h"
 
 /* GC initialization is done in main() */
 
 /* Forward declarations */
 LispValue* make_adder(LispValue* n);
+LispValue* make_adder_wrapper(LispValue* __args, LispValue* __env);
 
 LispValue* __lambda_0(LispValue* __args, LispValue* __env) {
     LispValue* x = lisp_list_get(__args, 0);

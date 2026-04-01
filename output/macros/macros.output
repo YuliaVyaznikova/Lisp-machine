@@ -5,17 +5,25 @@ nil
 "condition was false"
 nil
 "=== cond macro ==="
+"cond with 1 clause:"
+"only one"
+"cond with 2 clauses:"
+"second"
+"cond with 3 clauses:"
 "one equals one"
-"fallback"
+"cond with 5 clauses:"
+"one is one"
+"cond with 7 clauses:"
+"matched at 7th clause"
 "=== and macro ==="
 true
 false
-true
+nil
 true
 "=== or macro ==="
 true
 true
-true
+false
 true
 "=== let macro ==="
 15

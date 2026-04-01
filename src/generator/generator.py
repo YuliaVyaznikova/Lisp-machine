@@ -164,7 +164,7 @@ class CodeGenerator:
     
     def _header(self) -> str:
         return """#include <stdio.h>
-#include "../runtime/lisp.h"
+#include "runtime/lisp.h"
 
 /* GC initialization is done in main() */"""
     
