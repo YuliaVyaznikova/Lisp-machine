@@ -59,6 +59,7 @@ class ApplicationNode(ASTNode):
 class DefineNode(ASTNode):
     name: str = ""
     params: List[str] = None
+    rest_param: str = None
     body: ASTNode = None
     value: ASTNode = None
     def __post_init__(self):
@@ -68,6 +69,7 @@ class DefineNode(ASTNode):
 @dataclass
 class LambdaNode(ASTNode):
     params: List[str] = None
+    rest_param: str = None
     body: ASTNode = None
     def __post_init__(self):
         if self.params is None:
@@ -90,3 +92,7 @@ class UnquoteNode(ASTNode):
 @dataclass
 class UnquoteSplicingNode(ASTNode):
     value: ASTNode = None
+
+@dataclass
+class CemitNode(ASTNode):
+    code: str = ""

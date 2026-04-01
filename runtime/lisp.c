@@ -355,12 +355,12 @@ LispValue* lisp_cons(LispValue* car, LispValue* cdr) {
 }
 
 LispValue* lisp_first(LispValue* pair) {
-    if (!pair || pair->type != LISP_PAIR) return NULL;
+    if (!pair || pair->type != LISP_PAIR) return LISP_NIL;
     return pair->data.pair.car;
 }
 
 LispValue* lisp_rest(LispValue* pair) {
-    if (!pair || pair->type != LISP_PAIR) return NULL;
+    if (!pair || pair->type != LISP_PAIR) return LISP_NIL;
     return pair->data.pair.cdr;
 }
 
@@ -882,4 +882,57 @@ LispValue* lisp_read_char_wrapper(LispValue* __args, LispValue* __env) {
     }
     char str[2] = { (char)c, '\0' };
     return lisp_make_string(str);
+}
+
+LispValue* lisp_open_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* filename = lisp_list_get(__args, 0);
+    LispValue* mode = lisp_list_get(__args, 1);
+    if (!filename || filename->type != LISP_STRING) return LISP_NIL;
+    const char* m = "r";
+    if (mode && mode->type == LISP_STRING) {
+        m = mode->data.string_val;
+    }
+    FILE* f = fopen(filename->data.string_val, m);
+    if (!f) return LISP_NIL;
+    LispValue* val = alloc_value(LISP_FILE);
+    val->data.file_val = f;
+    return val;
+}
+
+LispValue* lisp_close_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* file = lisp_list_get(__args, 0);
+    if (!file || file->type != LISP_FILE) return LISP_NIL;
+    fclose(file->data.file_val);
+    file->data.file_val = NULL;
+    return LISP_TRUE;
+}
+
+LispValue* lisp_file_read_line_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* file = lisp_list_get(__args, 0);
+    if (!file || file->type != LISP_FILE || !file->data.file_val) return LISP_NIL;
+    char buffer[4096];
+    if (fgets(buffer, sizeof(buffer), file->data.file_val) == NULL) {
+        return LISP_NIL;
+    }
+    size_t len = strlen(buffer);
+    if (len > 0 && buffer[len - 1] == '\n') {
+        buffer[len - 1] = '\0';
+    }
+    return lisp_make_string(buffer);
+}
+
+LispValue* lisp_file_write_line_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* file = lisp_list_get(__args, 0);
+    LispValue* line = lisp_list_get(__args, 1);
+    if (!file || file->type != LISP_FILE || !file->data.file_val) return LISP_NIL;
+    if (!line || line->type != LISP_STRING) return LISP_NIL;
+    fprintf(file->data.file_val, "%s\n", line->data.string_val);
+    return LISP_TRUE;
+}
+
+LispValue* lisp_file_eof_wrapper(LispValue* __args, LispValue* __env) {
+    LispValue* file = lisp_list_get(__args, 0);
+    if (!file || file->type != LISP_FILE || !file->data.file_val) return LISP_TRUE;
+    if (feof(file->data.file_val)) return LISP_TRUE;
+    return LISP_FALSE;
 }

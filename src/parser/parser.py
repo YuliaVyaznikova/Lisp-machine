@@ -45,8 +45,18 @@ class DefineHandler(SpecialFormHandler):
             if not second.elements or not isinstance(second.elements[0], SymbolNode):
                 raise ParseError("define function requires name", start)
             name = second.elements[0].name
-            params = [p.name for p in second.elements[1:] if isinstance(p, SymbolNode)]
-            return DefineNode(name=name, params=params, body=elements[2])
+            params = []
+            rest_param = None
+            param_elements = second.elements[1:]
+            for i, p in enumerate(param_elements):
+                if isinstance(p, SymbolNode):
+                    if p.name == "&rest":
+                        if i + 1 < len(param_elements) and isinstance(param_elements[i + 1], SymbolNode):
+                            rest_param = param_elements[i + 1].name
+                            break
+                    else:
+                        params.append(p.name)
+            return DefineNode(name=name, params=params, rest_param=rest_param, body=elements[2])
         
         raise ParseError("invalid define syntax", start)
 
@@ -102,11 +112,23 @@ class DefmacroHandler(SpecialFormHandler):
             
         return DefmacroNode(name=name_node.name, params=params, rest_param=rest_param, body=elements[3])
 
+class CemitHandler(SpecialFormHandler):
+    def can_handle(self, name: str) -> bool:
+        return name == "c-emit"
+    
+    def parse(self, elements: list, start: Token) -> ASTNode:
+        if len(elements) < 2:
+            raise ParseError("c-emit requires a string argument", start)
+        code_node = elements[1]
+        if not isinstance(code_node, StringNode):
+            raise ParseError("c-emit requires a string argument", start)
+        return CemitNode(code=code_node.value)
+
 class Parser:
     def __init__(self, tokens: list):
         self.tokens = tokens
         self.pos = 0
-        self.handlers = [IfHandler(), DefineHandler(), LambdaHandler(), DefmacroHandler()]
+        self.handlers = [IfHandler(), DefineHandler(), LambdaHandler(), DefmacroHandler(), CemitHandler()]
         self.quasiquote_depth = 0
     
     def current(self) -> Token:

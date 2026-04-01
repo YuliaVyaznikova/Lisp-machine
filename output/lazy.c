@@ -5,14 +5,23 @@
 
 /* Forward declarations */
 LispValue* lazy_first(LispValue* s);
+LispValue* lazy_first_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lazy_rest(LispValue* s);
+LispValue* lazy_rest_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lazy_map(LispValue* f, LispValue* s);
+LispValue* lazy_map_wrapper(LispValue* __args, LispValue* __env);
 LispValue* lazy_filter(LispValue* pred, LispValue* s);
+LispValue* lazy_filter_wrapper(LispValue* __args, LispValue* __env);
 LispValue* take(LispValue* n, LispValue* s);
+LispValue* take_wrapper(LispValue* __args, LispValue* __env);
 LispValue* force_list(LispValue* s);
+LispValue* force_list_wrapper(LispValue* __args, LispValue* __env);
 LispValue* integers_from(LispValue* n);
+LispValue* integers_from_wrapper(LispValue* __args, LispValue* __env);
 LispValue* even_p(LispValue* x);
+LispValue* even_p_wrapper(LispValue* __args, LispValue* __env);
 LispValue* square(LispValue* x);
+LispValue* square_wrapper(LispValue* __args, LispValue* __env);
 
 LispValue* lazy_first(LispValue* s) {
     return lisp_first(s);

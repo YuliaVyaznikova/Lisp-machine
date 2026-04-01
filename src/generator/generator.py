@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 from src.parser.ast_nodes import *
 
 class CodeGenerator:
-    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop', 'gc-push-root', 'gc-pop-root', 'princ', 'terpri', 'read-line', 'read-char'}
+    BUILTINS = {'+', '-', '*', '/', '=', '<', '>', 'first', 'rest', 'cons', 'print', 'if', 'define', 'lambda', 'quote', 'nil', 'true', 'false', 'set-cdr!', 'gc-collect', 'gc-stats', 'drop', 'gc-push-root', 'gc-pop-root', 'princ', 'terpri', 'read-line', 'read-char', 'c-emit', 'open', 'close', 'file-read-line', 'file-write-line', 'file-eof'}
     
     def __init__(self):
         self.indent = 0
@@ -11,6 +11,7 @@ class CodeGenerator:
         self.variables = {}
         self.functions = []
         self.func_names = set()
+        self.variadic_funcs = set()
         self.func_counter = 0
         self.local_vars = set()
         self.closures = []
@@ -135,6 +136,7 @@ class CodeGenerator:
         self.variables = {}
         self.functions = []
         self.func_names = set()
+        self.variadic_funcs = set()
         self.local_vars = set()
         self.func_counter = 0
         self.dropped_vars = set()
@@ -159,9 +161,14 @@ class CodeGenerator:
     def _forward_decls(self, nodes: List[ASTNode]) -> str:
         decls = []
         for node in nodes:
-            if isinstance(node, DefineNode) and node.params:
-                params_str = ", ".join(["LispValue* " + self._mangle_name(p) for p in node.params])
-                decls.append(f"LispValue* {self._mangle_name(node.name)}({params_str});")
+            if isinstance(node, DefineNode) and (node.params or node.rest_param):
+                mangled = self._mangle_name(node.name)
+                all_params = list(node.params)
+                if node.rest_param:
+                    all_params.append(node.rest_param)
+                params_str = ", ".join(["LispValue* " + self._mangle_name(p) for p in all_params])
+                decls.append(f"LispValue* {mangled}({params_str});")
+                decls.append(f"LispValue* {mangled}_wrapper(LispValue* __args, LispValue* __env);")
         if decls:
             return "/* Forward declarations */\n" + "\n".join(decls)
         return "/* Forward declarations */"
@@ -174,7 +181,7 @@ class CodeGenerator:
     def _collect_defines(self, nodes: List[ASTNode]):
         for node in nodes:
             if isinstance(node, DefineNode):
-                if node.params:
+                if (node.params is not None and len(node.params) > 0) or node.rest_param:
                     self._gen_function(node)
                 else:
                     self.variables[node.name] = node.value
@@ -182,13 +189,20 @@ class CodeGenerator:
     def _gen_function(self, node: DefineNode):
         mangled = self._mangle_name(node.name)
         self.func_names.add(mangled)
+        if node.rest_param:
+            self.variadic_funcs.add(mangled)
         self.temp_counter = 0
         self.local_vars = set(node.params)
+        if node.rest_param:
+            self.local_vars.add(node.rest_param)
         self.current_function = mangled
         self.statements = []
         func_stmts = []
         
-        params_str = ", ".join(["LispValue* " + self._mangle_name(p) for p in node.params])
+        all_params = list(node.params)
+        if node.rest_param:
+            all_params.append(node.rest_param)
+        params_str = ", ".join(["LispValue* " + self._mangle_name(p) for p in all_params])
         func_stmts.append(f"LispValue* {mangled}({params_str}) {{")
         
         if self._can_optimize_tail_recursion(node):
@@ -207,7 +221,15 @@ class CodeGenerator:
         wrapper_stmts = [f"LispValue* {mangled}_wrapper(LispValue* __args, LispValue* __env) {{"]
         for i, p in enumerate(node.params):
             wrapper_stmts.append(f"    LispValue* {self._mangle_name(p)} = lisp_list_get(__args, {i});")
-        args_str = ", ".join(self._mangle_name(p) for p in node.params)
+        
+        if node.rest_param:
+            rest_idx = len(node.params)
+            wrapper_stmts.append(f"    LispValue* {self._mangle_name(node.rest_param)} = NULL;")
+            wrapper_stmts.append(f"    LispValue* __curr = __args;")
+            wrapper_stmts.append(f"    for (int __i = 0; __i < {rest_idx}; __i++) __curr = lisp_rest(__curr);")
+            wrapper_stmts.append(f"    {self._mangle_name(node.rest_param)} = __curr;")
+        
+        args_str = ", ".join(self._mangle_name(p) for p in all_params)
         wrapper_stmts.append(f"    return {mangled}({args_str});")
         wrapper_stmts.append("}")
         
@@ -302,7 +324,7 @@ class CodeGenerator:
             all_vars.append(var_name)
         
         for node in nodes:
-            if isinstance(node, DefineNode) and not node.params:
+            if isinstance(node, DefineNode) and not node.params and not node.rest_param:
                 expr = self._gen_expr(node.value)
                 var_name = self._mangle_name(node.name)
                 lines.append(f"    {var_name} = {expr};")
@@ -367,6 +389,9 @@ class CodeGenerator:
         
         if isinstance(node, LambdaNode):
             return self._gen_lambda(node)
+        
+        if isinstance(node, CemitNode):
+            return f"({node.code})"
         
         return "NULL"
     
@@ -480,6 +505,16 @@ class CodeGenerator:
                     return "lisp_read_line_wrapper(NULL, NULL)"
                 case "read-char":
                     return "lisp_read_char_wrapper(NULL, NULL)"
+                case "open":
+                    return f"lisp_open_wrapper({self._build_args_list(args)}, NULL)"
+                case "close":
+                    return f"lisp_close_wrapper({self._build_args_list(args)}, NULL)"
+                case "file-read-line":
+                    return f"lisp_file_read_line_wrapper({self._build_args_list(args)}, NULL)"
+                case "file-write-line":
+                    return f"lisp_file_write_line_wrapper({self._build_args_list(args)}, NULL)"
+                case "file-eof":
+                    return f"lisp_file_eof_wrapper({self._build_args_list(args)}, NULL)"
                 case "drop":
                     arg = args[0]
                     if isinstance(arg, SymbolNode):
@@ -493,6 +528,9 @@ class CodeGenerator:
                 case _:
                     mangled = self._mangle_name(func.name)
                     if mangled in self.func_names:
+                        if mangled in self.variadic_funcs:
+                            args_list = self._build_args_list(args)
+                            return f"{mangled}_wrapper({args_list}, NULL)"
                         args_str = ", ".join(self._gen_expr(a) for a in args)
                         return f"{mangled}({args_str})"
                     if func.name in self.variables:

@@ -41,8 +41,18 @@ class MacroExpander:
                         return DefineNode(name=second.name, value=expanded_elements[2])
                     if isinstance(second, ListNode) and second.elements and isinstance(second.elements[0], SymbolNode):
                         fname = second.elements[0].name
-                        params = [p.name for p in second.elements[1:] if isinstance(p, SymbolNode)]
-                        return DefineNode(name=fname, params=params, body=expanded_elements[2])
+                        params = []
+                        rest_param = None
+                        param_elements = second.elements[1:]
+                        for i, p in enumerate(param_elements):
+                            if isinstance(p, SymbolNode):
+                                if p.name == "&rest":
+                                    if i + 1 < len(param_elements) and isinstance(param_elements[i + 1], SymbolNode):
+                                        rest_param = param_elements[i + 1].name
+                                        break
+                                else:
+                                    params.append(p.name)
+                        return DefineNode(name=fname, params=params, rest_param=rest_param, body=expanded_elements[2])
             
             return ListNode(elements=expanded_elements)
         
@@ -54,16 +64,17 @@ class MacroExpander:
             )
         
         if isinstance(node, DefineNode):
-            if node.params:
+            if node.params or node.rest_param:
                 return DefineNode(
                     name=node.name,
                     params=node.params,
+                    rest_param=node.rest_param,
                     body=self.expand(node.body)
                 )
             return DefineNode(name=node.name, value=self.expand(node.value))
         
         if isinstance(node, LambdaNode):
-            return LambdaNode(params=node.params, body=self.expand(node.body))
+            return LambdaNode(params=node.params, rest_param=node.rest_param, body=self.expand(node.body))
         
         if isinstance(node, QuoteNode):
             return node
